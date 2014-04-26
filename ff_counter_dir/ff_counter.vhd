@@ -1,6 +1,6 @@
 
 -- Lessons learned:
--- VHDL pre-2008 Can't read output so arch circuit2 is not compilable unless we compile with 2008 option
+-- VHDL pre-2008 Can't read an output so arch circuit2 is not compilable unless we compile with 2008 option
 -- You can assign signal from multiple sources AS LONG AS IT NOT ASSIGNED FROM MULTIPLE SOURCES IN THE SAME CCLOCK CYCLE
 -- Expressions used for conditionals i.e: if, elsif. Can have an addition in one of the sides of the comparison e.g: i + 1 = 8 
 -- same functionality achieved by the 3 different architectures
