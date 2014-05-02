@@ -36,8 +36,7 @@ package pkg_types is
     --
     -- Permutation network in/out
     --
-    -- type t_app_messages is array (SUBMAT_SIZE - 1 downto 0) of signed(BW_APP - 1 downto 0);
-    type t_app_messages is array (8 - 1 downto 0) of signed(BW_APP - 1 downto 0);
+    type t_app_messages is array (SUBMAT_SIZE - 1 downto 0) of signed(BW_APP - 1 downto 0);
     
     
     -- signal used for shifting the barrel shifter
@@ -48,11 +47,11 @@ package pkg_types is
     --
 
     -- matrix representing APP ram
-    -- type t_app_ram is array (BW_APP_MESSAGES_R050 - 1 downto 0) of t_app_messages;
-    --
-    -- -- used for in/out of APP ram
-    -- type t_app_ram_select is array (BW_APP_MESSAGES_R050 - 1 downto 0) of std_logic;
-    --
+    type t_app_ram is array (BW_APP_MESSAGES_R050 - 1 downto 0) of t_app_messages;
+
+    -- used for in/out of APP ram
+    type t_app_ram_select is array (BW_APP_MESSAGES_R050 - 1 downto 0) of std_logic;
+
     
     -- iteration type
 

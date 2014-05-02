@@ -1,6 +1,9 @@
 -- lesson learned:
+-- for variables in processes:
+-- variables in processes are initialized only once, i.e the first time the process is run, afterwards they use the value they stored in the last process run
 -- for simulation of testbenches:
 -- when a signal that is feed into a flip flop or register toogles/changes at the rising edge of the clk, the value chosen by modelsim is the value that the signal had before toogling/changing
+-- all simulation processes should have a wait statement otherwise modelsim hangs!, except of course the process that stops the simulation (commonly the output verification process, as it has an assert and report failure)
 --! 
 --! Copyright (C) 2010 - 2013 Creonic GmbH
 --!
@@ -18,28 +21,26 @@ use ieee.numeric_std.all;
 use std.textio.all;
 use work.pkg_types.all;
 use work.pkg_param.all;
--- use work.pkg_support.all;
--- use work.pkg_types.all;
 --------------------------------------------------------
-entity ram_tb is
+entity app_ram_tb is
     generic (PERIOD: time := 40 ns;
             PD: time := 3 ns;
             M: integer := 1);
-end entity ram_tb;
+end entity app_ram_tb;
 --------------------------------------------------------
-architecture circuit of ram_tb is
+architecture circuit of app_ram_tb is
 
     --------------------------------------------------------
     -- dut declaration
     --------------------------------------------------------
-    component ram is
+    component app_ram is
         port (
                  clk: in std_logic;
                  wr_address: in std_logic_vector(M-1 downto 0);
                  rd_address: in std_logic_vector(M-1 downto 0);
                  data_in: in t_app_messages;
                  data_out: out t_app_messages);
-    end component ram;
+    end component app_ram;
 
     
     --------------------------------------------------------
@@ -55,7 +56,7 @@ architecture circuit of ram_tb is
     -- input files
     --------------------------------------------------------
     file fin: text open read_mode is "input_ram.txt";
-    -- file fout: text open read_mode is "output_ram.txt";
+    file fout: text open read_mode is "output_ram.txt";
     
 
 begin
@@ -64,7 +65,7 @@ begin
     --------------------------------------------------------------------------------------
     -- dut instantiation
     --------------------------------------------------------------------------------------
-    dut: ram port map (
+    dut: app_ram port map (
     clk_tb,
     wr_address_tb,
     rd_address_tb,
@@ -84,11 +85,11 @@ begin
     process
     begin
         wr_address_tb <= std_logic_vector(to_unsigned(0, 1));
-        wait for PERIOD;        -- 40 ns
+        wait for PERIOD/2 + PD;        -- 23 ns
         wr_address_tb <= std_logic_vector(to_unsigned(1, 1));
-        wait for PERIOD;        -- 80 ns
+        wait for PERIOD;        -- 63 ns
         wr_address_tb <= std_logic_vector(to_unsigned(0, 1));
-        wait for PERIOD;        -- 120 ns
+        wait for PERIOD;        -- 103 ns
         wr_address_tb <= std_logic_vector(to_unsigned(1, 1));
         wait;
     end process;
@@ -102,22 +103,20 @@ begin
         
     begin
         if (not endfile(fin)) then
-            if (first = 0) then
-                first := 1;
-            else
-                wait for PERIOD/2;      -- 20/60/100/140
-            end if;
-            for i in 0 to 7 loop
+            for i in 0 to SUBMAT_SIZE-1 loop
                 readline(fin, l); -- read line
                 read(l, value); -- read value
                 data_in_tb(i) <= to_signed(value, BW_APP); -- put value to input 
             end loop;
-            wait for PERIOD/2;      -- 40/80/120/160 ns
+            if (first = 0) then
+                wait for PERIOD/2 + PD;      -- 23 ns
+                first := 1;
+            else
+                wait for PERIOD;      -- 63/103 ns
+            end if;
+
         else
-            wait for 60 ns;
-            assert false
-            report "no errors"
-            severity failure;
+            wait;
         end if;
     end process;
 
@@ -126,13 +125,13 @@ begin
     process
     begin
         rd_address_tb <= std_logic_vector(to_unsigned(1, 1));
-        wait for PERIOD;        -- 40 ns
+        wait for PERIOD/2 + PD;        -- 23 ns
         rd_address_tb <= std_logic_vector(to_unsigned(0, 1));
-        wait for PERIOD;        -- 80 ns
+        wait for PERIOD;        -- 63 ns
         rd_address_tb <= std_logic_vector(to_unsigned(1, 1));
-        wait for PERIOD;        -- 120 ns
+        wait for PERIOD;        -- 103 ns
         rd_address_tb <= std_logic_vector(to_unsigned(0, rd_address_tb'length));
-        wait for PERIOD;        -- 160 ns
+        wait for PERIOD;        -- 143 ns
         rd_address_tb <= std_logic_vector(to_unsigned(1, rd_address_tb'length));
         wait;
     end process;
@@ -141,8 +140,34 @@ begin
     --------------------------------------------------------------------------------------
     -- output comparison
     --------------------------------------------------------------------------------------
-
-
+    process
+        variable l: line;
+        variable value: integer range -512 to 511; 
+        variable first: integer range 0 to 1 := 0;
+        
+    begin
+        if (not endfile(fout)) then
+            if (first = 0) then
+                first := 1;
+                wait for PERIOD/2 + PD;
+                wait for PD;
+            else
+                wait for PERIOD;
+            end if;
+            for i in 0 to SUBMAT_SIZE-1 loop
+                readline(fout, l);
+                read(l, value);
+                assert data_out_tb(i) <= to_signed(value, BW_APP)
+                report "output mismatch"
+                severity failure;
+            end loop;
+        else
+            wait for 40 ns; -- 186 ns
+            assert false
+            report "no errors"
+            severity failure;
+        end if;
+    end process;
 
 end architecture circuit;
 
