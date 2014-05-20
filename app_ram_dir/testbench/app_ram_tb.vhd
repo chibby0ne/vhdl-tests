@@ -36,6 +36,7 @@ architecture circuit of app_ram_tb is
     component app_ram is
         port (
                  clk: in std_logic;
+                 we: in std_logic;
                  wr_address: in std_logic_vector(M-1 downto 0);
                  rd_address: in std_logic_vector(M-1 downto 0);
                  data_in: in t_app_messages;
@@ -47,6 +48,7 @@ architecture circuit of app_ram_tb is
     -- signal declarations
     --------------------------------------------------------
     signal clk_tb: std_logic := '0';
+    signal we_tb: std_logic := '0';
     signal wr_address_tb: std_logic_vector(M-1 downto 0);
     signal rd_address_tb: std_logic_vector(M-1 downto 0);
     signal data_in_tb: t_app_messages;
@@ -67,6 +69,7 @@ begin
     --------------------------------------------------------------------------------------
     dut: app_ram port map (
     clk_tb,
+    we_tb,
     wr_address_tb,
     rd_address_tb,
     data_in_tb,
@@ -77,19 +80,29 @@ begin
     --------------------------------------------------------------------------------------
     -- stimuli generation
     --------------------------------------------------------------------------------------
-    --clk
+    -- clk
     clk_tb <= not clk_tb after PERIOD/2;
+
+
+    -- we 
+    process
+    begin
+        we_tb <= '0';
+        wait for PERIOD + PERIOD/2  + PD;  -- 63 ns         -- two first rising edge anothing is written
+        we_tb <= '1';
+        wait;
+    end process;
     
 
     -- wr_addr
     process
     begin
         wr_address_tb <= std_logic_vector(to_unsigned(0, 1));
-        wait for PERIOD/2 + PD;        -- 23 ns
+        wait for PERIOD/2 + PD;         -- 23 ns
         wr_address_tb <= std_logic_vector(to_unsigned(1, 1));
-        wait for PERIOD;        -- 63 ns
+        wait for PERIOD;                -- 63 ns
         wr_address_tb <= std_logic_vector(to_unsigned(0, 1));
-        wait for PERIOD;        -- 103 ns
+        wait for PERIOD;                -- 103 ns
         wr_address_tb <= std_logic_vector(to_unsigned(1, 1));
         wait;
     end process;
@@ -100,7 +113,6 @@ begin
         variable l: line;
         variable value: integer range -512 to 511;
         variable first: integer range 0 to 1 := 0;
-        
     begin
         if (not endfile(fin)) then
             for i in 0 to SUBMAT_SIZE-1 loop
@@ -114,9 +126,11 @@ begin
             else
                 wait for PERIOD;      -- 63/103 ns
             end if;
-
         else
             wait;
+            -- assert false
+            -- report "no errors"
+            -- severity failure;
         end if;
     end process;
 
@@ -144,7 +158,7 @@ begin
         variable l: line;
         variable value: integer range -512 to 511; 
         variable first: integer range 0 to 1 := 0;
-        
+
     begin
         if (not endfile(fout)) then
             if (first = 0) then

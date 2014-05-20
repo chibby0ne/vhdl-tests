@@ -25,8 +25,8 @@ entity app_ram is
     port (
         clk: in std_logic;
         we: in std_logic;
-        wr_address: in std_logic_vector(BW_APP_RAM - 1 downto 0);
-        rd_address: in std_logic_vector(BW_APP_RAM - 1 downto 0);
+        wr_address: in t_app_ram_addr;
+        rd_address: in t_app_ram_addr;
         data_in: in t_app_messages;
         data_out: out t_app_messages);
 end entity app_ram;
@@ -51,7 +51,7 @@ begin
 
 
     --------------------------------------------------------------------------------------
-    -- registered input and unregistered output
+    -- registered input and output
     --------------------------------------------------------------------------------------
     process (clk)
     begin

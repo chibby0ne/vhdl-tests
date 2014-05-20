@@ -19,6 +19,7 @@ use work.pkg_types.all;
 entity cnb is
     port (
              clk: in std_logic;
+             we: in std_logic;
              code_rate: in t_code_rate;
              wr_address: in std_logic_vector(BW_MSG_RAM-1 downto 0);
              rd_address: in std_logic_vector(BW_MSG_RAM-1 downto 0);
@@ -31,6 +32,7 @@ architecture circuit of cnb is
     component msg_ram is
         port (
                  clk: in std_logic;
+                 we: in std_logic;
                  wr_address: in std_logic_vector(BW_MSG_RAM-1 downto 0);
                  rd_address: in std_logic_vector(BW_MSG_RAM-1 downto 0);
                  data_in: in t_cn_message;
@@ -49,6 +51,7 @@ begin
     ram: msg_ram 
     port map (
         clk => clk,
+        we => we,
         wr_address => wr_address,
         rd_address => rd_address,
         data_in => data_in,

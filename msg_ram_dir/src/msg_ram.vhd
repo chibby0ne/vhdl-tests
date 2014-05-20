@@ -22,6 +22,7 @@ use work.pkg_types.all;
 entity msg_ram is
     port (
         clk: in std_logic;
+        we: in std_logic;
         wr_address: in std_logic_vector(BW_MSG_RAM - 1 downto 0);
         rd_address: in std_logic_vector(BW_MSG_RAM - 1 downto 0);
         data_in: in t_cn_message;
@@ -50,12 +51,14 @@ begin
 
 
     --------------------------------------------------------------------------------------
-    -- registered input and output
+    -- registered input and unregistered output
     --------------------------------------------------------------------------------------
     process (clk)
     begin
         if (clk'event and clk = '1') then
-            myram(wr_address_int) <= data_in;
+            if (we = '1') then
+                myram(wr_address_int) <= data_in;
+            end if;
         end if;
     end process;
     data_out <= myram(rd_address_int);

@@ -4,8 +4,8 @@
 --! 
 --! Copyright (C) 2010 - 2013 Creonic GmbH
 --!
---! @file: ram.vhd
---! @brief: ram implementation
+--! @file: msg_ram.vhd
+--! @brief: msg_ram implementation
 --! @author: Antonio Gutierrez
 --! @date: 2014-04-23
 --!
@@ -14,34 +14,39 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use work.pkg_types.all;
-use work.pkg_param.all;
 use work.pkg_param_derived.all;
-
-
+use work.pkg_param.all;
+use work.pkg_types.all;
 
 --------------------------------------------------------
-entity app_ram is
+entity msg_ram is
     port (
         clk: in std_logic;
         we: in std_logic;
-        wr_address: in std_logic_vector(BW_APP_RAM - 1 downto 0);
-        rd_address: in std_logic_vector(BW_APP_RAM - 1 downto 0);
-        data_in: in t_app_messages;
-        data_out: out t_app_messages);
-end entity app_ram;
+        wr_address: in t_msg_ram_addr;
+        rd_address: in t_msg_ram_addr;
+        data_in: in t_cn_message;
+        data_out: out t_cn_message);
+end entity msg_ram;
 --------------------------------------------------------
-architecture circuit of app_ram is
+architecture circuit of msg_ram is
 
     -- signal declarations
-    type memory is array (0 to APP_RAM_DEPTH - 1) of t_app_messages;
-    signal myram: memory := (others => (others => (others => '0')));
+    type memory is array (0 to MSG_RAM_DEPTH - 1) of t_cn_message;    -- 16 max num of layers
+    signal myram: memory := (
+    -- this initialization was added to test CNB functionality for iter != 0
+    -- 0 => (0 => to_signed(13, BW_EXTR), others => to_signed(9, BW_EXTR)),
+    -- 1 => (others => to_signed(9, BW_EXTR)),
+    -- 2 => (0 => to_signed(-13, BW_EXTR), others => to_signed(-9, BW_EXTR)),
+    -- 3 => (others => to_signed(-9, BW_EXTR)),
+    others => (others => (others => '0')));
 
-    signal wr_address_int: integer range 0 to 2**BW_APP_RAM - 1;
-    signal rd_address_int: integer range 0 to 2**BW_APP_RAM - 1;
+    signal wr_address_int: integer range 0 to 2**BW_MSG_RAM - 1;
+    signal rd_address_int: integer range 0 to 2**BW_MSG_RAM - 1;
 
 begin
 
+    
     
     --------------------------------------------------------------------------------------
     -- typecast entity signals
@@ -51,7 +56,7 @@ begin
 
 
     --------------------------------------------------------------------------------------
-    -- registered input and unregistered output
+    -- registered input and output
     --------------------------------------------------------------------------------------
     process (clk)
     begin
