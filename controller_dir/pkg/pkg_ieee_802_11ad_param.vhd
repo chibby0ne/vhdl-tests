@@ -15,13 +15,13 @@ use ieee.numeric_std.all;
 package pkg_ieee_802_11ad_param is
 
     -- constants used for full matrix
-    constant R050_ROWS: integer := 8;
+    constant R050_ROWS: natural range 0 to 8 := 8;
     constant R050_COLS: integer := 16;
-    constant R062_ROWS: integer := 6;
+    constant R062_ROWS: natural range 0 to 8 := 6;
     constant R062_COLS: integer := 16;
-    constant R075_ROWS: integer := 4;
+    constant R075_ROWS: natural range 0 to 8 := 4;
     constant R075_COLS: integer := 16;
-    constant R081_ROWS: integer := 3;
+    constant R081_ROWS: natural range 0 to 8 := 3;
     constant R081_COLS: integer := 16;
 
 end package pkg_ieee_802_11ad_param;

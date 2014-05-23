@@ -21,12 +21,6 @@ package pkg_ieee_802_11ad_matrix is
     type t_array60 is array (0 to 59) of integer range -1 to SUBMAT_SIZE;
     type t_array48 is array (0 to 47) of integer range -1 to SUBMAT_SIZE;
     
-    -- type for matrices in full form
-    type t_array_full_r050 is array (0 to R050_ROWS * SUBMAT_SIZE - 1, 0 to MAT_COLUMNS * SUBMAT_SIZE - 1) of std_logic;    -- array[8*42][16*42]
-    type t_array_full_r062 is array (0 to R062_ROWS * SUBMAT_SIZE - 1, 0 to MAT_COLUMNS * SUBMAT_SIZE - 1) of std_logic;    -- array[6*42][16*42]
-    type t_array_full_r075 is array (0 to R075_ROWS * SUBMAT_SIZE - 1, 0 to MAT_COLUMNS * SUBMAT_SIZE - 1) of std_logic;    -- array[4*42][16*42]
-    type t_array_full_r081 is array (0 to R081_ROWS * SUBMAT_SIZE - 1, 0 to MAT_COLUMNS * SUBMAT_SIZE - 1) of std_logic;    -- array[3*42][16*42]
-    
     -- type for P submatrix
     type t_submatrix is array (0 to SUBMAT_SIZE - 1, 0 to SUBMAT_SIZE - 1) of std_logic;  
 
@@ -90,28 +84,11 @@ package pkg_ieee_802_11ad_matrix is
     37, 31, 18, 23, 11, 21, 6, 20, 32, 9, 12, 29, 10, 0, 13, -1, 
     25, 22, 4, 34, 31, 3, 14, 15, 4, 2, 14, 18, 13, 13, 22, 24);
 
-    constant DUMMY_VALUES : t_submatrix := (others => 31);
-
-    function gen_identity_matrix(shift : integer) return t_submatrix;
+    -- constant DUMMY_VALUES : t_submatrix := (others => 31);
 
 end package pkg_ieee_802_11ad_matrix;
 ------------------------------
 package body pkg_ieee_802_11ad_matrix is
 
-    function gen_identity_matrix(shift : integer) return t_submatrix is
-        variable shifted_identity_matrix: t_submatrix;
-    begin
-        rows: for i in 0 to SUBMAT_SIZE-1 loop
-            columns: for j in SUBMAT_SIZE-1 loop
-                if (j + shift mod SUBMAT_SIZE = j) then      -- if we are on the column number(j + shift mod SUBMAT) 
-                    shifted_identity_matrix(i,j) := '1';
-                else 
-                    shifted_identity_matrix(i, j) := '0';   -- else we fill with 0's the rest of the matrix
-                end if;
-            end loop columns;
-        end loop rows;
-    end function gen_identity_matrix;
-
-   
 
 end package body pkg_ieee_802_11ad_matrix;

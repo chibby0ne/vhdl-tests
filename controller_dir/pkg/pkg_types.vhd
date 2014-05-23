@@ -89,7 +89,11 @@ package pkg_types is
     -- app ram addr
     subtype t_app_ram_addr is std_logic_vector(BW_APP_RAM - 1 downto 0);
 
+    -- MUX at output of APP 
+    -----------------------
+    type t_mux_out_app is array (CFU_PAR_LEVEL - 1 downto 0) of std_logic_vector(1 downto 0);
     
+
     -- Controller types
     ----------------------
 
