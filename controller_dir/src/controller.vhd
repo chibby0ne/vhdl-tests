@@ -72,7 +72,17 @@ architecture circuit of controller is
     signal matrix_rows: natural range 0 to 8:= 1;
     signal matrix_max_check_degree: natural range 0 to 16;
 
--- iterating signal
+    -- iterating signal
+
+    -- signals used for debugging (assigned by variables)
+    signal index_row_sig: natural := 0;
+    signal cng_counter_sig: natural := 0;
+    signal vector_addr_sig: natural := 0;
+    signal start_pos_next_half_sig: natural := 0;
+    
+    
+
+    
 
 begin
 
@@ -116,7 +126,7 @@ begin
     process (clk, rst)
     begin
         if (rst = '1') then
-            pr_state <= START_STORE_FIRST_HALF;
+            pr_state <= START_RESET;
         elsif (clk'event and clk = '1') then
             pr_state <= nx_state;
         end if;
@@ -150,9 +160,8 @@ begin
         variable last_row: boolean := false;
 
         -- msg rams
-        variable msg_row: integer range 0 to 16 := 0;
-        variable addr_rd_msg: integer range 0 to 16 := 0;
-        variable addr_wr_msg: integer range 0 to 16 := 0;
+        variable msg_row_rd: integer range 0 to 16 := 0;
+        variable msg_row_wr: integer range 0 to 16 := 0;
 
 
         -- parity checks
@@ -184,10 +193,59 @@ begin
 
             when START_RESET =>
 
+                --
+                -- clock gating for pipeline stages
+                --
+                ena_rp <= '0';
+                ena_ct <= '0';
+                ena_cf <= '0';
+                ena_vc <= '0';
 
-
-
-
+--
+--                 --
+--                 -- App ram (NOT ENABLED)
+--                 --
+--                 mux_input_app <= (others => '1');                               -- new codeword
+--                 app_rd_addr <= '0';
+--                 app_wr_addr <= '0';
+--
+--
+--                 --
+--                 -- max_app_val or real app val + real shift 
+--                 --
+--                 cng_counter := 0;                                           -- beginning the matrix
+--
+--                 vector_addr := cng_counter * matrix_max_check_degree;       -- base address for the matrix
+--                 index_row := vector_addr;
+--                 for i in 0 to CFU_PAR_LEVEL - 1 loop                        --- maybe change order of loop if not storing in correct place
+--                     if (matrix_addr(index_row) < 8) then                -- have we check entire first half row values?
+--                         if (i = matrix_addr(index_row)) then            -- if the value of matrix is not this one but it's not at the end of it
+--                             mux_output_app(i) <= std_logic_vector(to_unsigned(2, mux_output_app(0)'length));            
+--                             shift(i) <= std_logic_vector(to_unsigned(matrix_shift(index_row), shift(0)'length));
+--                             index_row := index_row + 1;
+--                         else
+--                             mux_output_app(i) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));         -- put max_extr_msg
+--                             shift(i) <= std_logic_vector(to_unsigned(0, shift(0)'length));                  -- it is indifferent how much we shift 
+--                         end if;
+--                     end if;
+--                 end loop;
+--
+--                 start_pos_next_half := index_row;
+--
+--                 --
+--                 -- inside CNB                 
+--                 --
+--                 iter <= std_logic_vector(to_unsigned(0, BW_MAX_ITER));
+--                 for i in SUBMAT_SIZE - 1 downto 0 loop
+--                     msg_rd_addr(i) <= std_logic_vector(to_unsigned(msg_row, BW_MSG_RAM));
+--                 end loop;
+--                 msg_row := msg_row + 1;
+--
+--
+--
+--
+--
+                valid_output <= '0';
                 nx_state <= START_STORE_FIRST_HALF;
 
                
@@ -218,34 +276,24 @@ begin
                 --
                 -- max_app_val or real app val + real shift 
                 --
+                -- first half
                 cng_counter := 0;                                           -- beginning the matrix
-
                 vector_addr := cng_counter * matrix_max_check_degree;       -- base address for the matrix
-                index_row := vector_addr;
+                index_row := 0;
                 for i in 0 to CFU_PAR_LEVEL - 1 loop                        --- maybe change order of loop if not storing in correct place
-                    if (matrix_addr(index_row) < 8) then                -- have we check entire first half row values?
-                        if (i = matrix_addr(index_row)) then            -- if the value of matrix is not this one but it's not at the end of it
+                    -- if (matrix_addr(index_row + vector_addr) < 8) then                -- have we check entire first half row values?
+                    if (index_row < matrix_max_check_degree / 2) then                -- have we check entire first half row values?
+                        if (i = matrix_addr(index_row + vector_addr)) then            -- is the value in app or dummy value 
                             mux_output_app(i) <= std_logic_vector(to_unsigned(2, mux_output_app(0)'length));            
-                            shift(i) <= std_logic_vector(to_unsigned(matrix_shift(index_row), shift(0)'length));
+                            shift(i) <= std_logic_vector(to_unsigned(matrix_shift(index_row + vector_addr), shift(0)'length));
                             index_row := index_row + 1;
                         else
                             mux_output_app(i) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));         -- put max_extr_msg
-                            shift(i) <= std_logic_vector(to_unsigned(0, shift(0)'length));   -- because the matrix has the same values it is indifferent how much we shift 
+                            shift(i) <= std_logic_vector(to_unsigned(0, shift(0)'length));                  -- it is indifferent how much we shift 
                         end if;
-                    else                                        -- this is a value from the second half
-
-                        --store index of matrix where to start from  for second half 
-                        start_pos_next_half := i;  
-
-                        indx := i;
-
-                        -- put the rest of the dummy values to the rest of the APP rams
-                        while indx < CFU_PAR_LEVEL - 1 loop                               
-                            mux_output_app(indx) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));         -- put max_extr_msg
-                            shift(indx) <= std_logic_vector(to_unsigned(0, shift(0)'length)); -- matrix has the same values it is indifferent how much we shift 
-                            indx := indx + 1;
-                        end loop;
-                        exit;
+                    else
+                        mux_output_app(i) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));         -- put max_extr_msg
+                        shift(i) <= std_logic_vector(to_unsigned(0, shift(0)'length));                  -- it is indifferent how much we shift 
                     end if;
                 end loop;
 
@@ -256,9 +304,18 @@ begin
                 --
                 iter <= std_logic_vector(to_unsigned(0, BW_MAX_ITER));
                 for i in SUBMAT_SIZE - 1 downto 0 loop
-                    msg_rd_addr(i) <= std_logic_vector(to_unsigned(msg_row, BW_MSG_RAM));
+                    msg_rd_addr(i) <= std_logic_vector(to_unsigned(msg_row_rd, BW_MSG_RAM));
                 end loop;
-                msg_row := msg_row + 1;
+                msg_row_rd := msg_row_rd + 1;
+
+
+                --
+                -- signals for debugging
+                --
+                index_row_sig <= index_row;
+                cng_counter_sig <= cng_counter;
+                vector_addr_sig <= vector_addr;
+                start_pos_next_half_sig <= start_pos_next_half;
 
 
                 --
@@ -269,7 +326,7 @@ begin
 
 
             --------------------------------------------------------------------------------------
-            -- second state
+            -- third state
             --------------------------------------------------------------------------------------
             when START_STORE_SECOND_HALF =>   -- store second half of codeword
 
@@ -294,23 +351,25 @@ begin
                 --
                 -- max_app_val or real app val + real shift 
                 --
+                -- second half
                 vector_addr := cng_counter * matrix_max_check_degree;
                 index_row := start_pos_next_half;                   -- start from position in index where value is >= 8 (meaning second half start)
                 for j in 0 to CFU_PAR_LEVEL - 1 loop        -- for all the APP rams
-                    if index_row < matrix_max_check_degree - 1 then     -- if this is still part of this second half row of the matrix 
-                        if (j = matrix_addr(index_row + vector_addr)) then        -- if this value of the matrix corresponds to this app ram
+                    if index_row < matrix_max_check_degree then     -- if this is still part of this second half row of the matrix 
+                        if (j + CFU_PAR_LEVEL = matrix_addr(index_row + vector_addr)) then        -- this value of the matrix corresponds to this app ram
                             mux_output_app(j) <= std_logic_vector(to_unsigned(2, mux_output_app(0)'length));            
                             shift(j) <= std_logic_vector(to_unsigned(matrix_shift(index_row + vector_addr), shift(0)'length));
+                            index_row := index_row + 1;
                         else 
                             mux_output_app(j) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));            
                             shift(j) <= std_logic_vector(to_unsigned(0, shift(0)'length));      
                         end if;
-                        index_row := index_row + 1;
-                    else                                    -- for all the remaining APP rams put out dummy value
-                        mux_output_app(j) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));            
-                        shift(j) <= std_logic_vector(to_unsigned(0, shift(0)'length));   -- it is indifferent how much we shift 
+                    -- else                                    -- for all the remaining APP rams put out dummy value
+                    --     mux_output_app(j) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));            
+                    --     shift(j) <= std_logic_vector(to_unsigned(0, shift(0)'length));   -- it is indifferent how much we shift 
                     end if;
                 end loop;
+
                 cng_counter := cng_counter + 1;             -- next time start from next row(cng)
 
 
@@ -319,9 +378,18 @@ begin
                 --
                 iter <= std_logic_vector(to_unsigned(0, BW_MAX_ITER));
                 for i in SUBMAT_SIZE - 1 downto 0 loop
-                    msg_rd_addr(i) <= std_logic_vector(to_unsigned(msg_row, BW_MSG_RAM));
+                    msg_rd_addr(i) <= std_logic_vector(to_unsigned(msg_row_rd, BW_MSG_RAM));
                 end loop;
-                msg_row := msg_row + 1;
+                msg_row_rd := msg_row_rd + 1;
+
+
+                --
+                -- signals for debugging
+                --
+                index_row_sig <= index_row;
+                cng_counter_sig <= cng_counter;
+                vector_addr_sig <= vector_addr;
+                start_pos_next_half_sig <= start_pos_next_half;
 
 
                 --
@@ -356,32 +424,27 @@ begin
                 --
                 -- max_app_val or real app val + real shift 
                 --
+                -- first half
                 vector_addr := cng_counter * matrix_max_check_degree;
+                index_row := 0;
                 for i in 0 to CFU_PAR_LEVEL - 1 loop            --- maybe change order of loop if not storing in correct place
-                    if (matrix_addr(i + vector_addr) < 8) then       
-                        if (i = matrix_addr(i + vector_addr)) then            -- if the value of the matrix is not this 1 but it's not at the end of it
+                    -- if (matrix_addr(index_row + vector_addr) < 8) then       
+                    if (index_row < matrix_max_check_degree / 2) then                -- have we check entire first half row values?
+                        if (i = matrix_addr(index_row + vector_addr)) then            -- is the value in app or is dummy value? 
                             mux_output_app(i) <= std_logic_vector(to_unsigned(0, mux_output_app(0)'length));            
-                            shift(i) <= std_logic_vector(to_unsigned(matrix_shift(i + vector_addr), shift(0)'length));
+                            shift(i) <= std_logic_vector(to_unsigned(matrix_shift(index_row + vector_addr), shift(0)'length));
+                            index_row := index_row + 1;
                         else
                             mux_output_app(i) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));            
-                            shift(i) <= std_logic_vector(to_unsigned(0, shift(0)'length));   -- because the matrix has the same values it is indifferent how much we shift 
+                            shift(i) <= std_logic_vector(to_unsigned(0, shift(0)'length));   -- it is indifferent how much we shift 
                         end if;
-                    else                                        -- this is a value from the second half
-
-                        --store index of matrix where to start from  for second half 
-                        start_pos_next_half := i + vector_addr;  
-
-                        indx := i;
-
-                        -- put the rest of the dummy values to the rest of the APP rams
-                        while indx < CFU_PAR_LEVEL - 1 loop                               
-                            mux_output_app(indx) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));            
-                            shift(indx) <= std_logic_vector(to_unsigned(0, shift(0)'length));   -- because the matrix has the same values it is indifferent how much we shift 
-                            indx := indx + 1;
-                        end loop;
-                        exit;
+                    else
+                        mux_output_app(i) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));            
+                        shift(i) <= std_logic_vector(to_unsigned(0, shift(0)'length));   -- it is indifferent how much we shift 
                     end if;
                 end loop;
+
+                start_pos_next_half := index_row;
 
 
                 --
@@ -389,9 +452,20 @@ begin
                 --
                 iter <= std_logic_vector(to_unsigned(0, BW_MAX_ITER));
                 for i in SUBMAT_SIZE - 1 downto 0 loop
-                    msg_rd_addr(i) <= std_logic_vector(to_unsigned(msg_row, BW_MSG_RAM));
+                    msg_rd_addr(i) <= std_logic_vector(to_unsigned(msg_row_rd, BW_MSG_RAM));
+                    msg_wr_addr(i) <= std_logic_vector(to_unsigned(msg_row_wr, BW_MSG_RAM));
                 end loop;
-                msg_row := msg_row + 1;
+                msg_row_rd := msg_row_rd + 1;
+                msg_row_wr := msg_row_wr + 1;
+
+
+                --
+                -- signals for debugging
+                --
+                index_row_sig <= index_row;
+                cng_counter_sig <= cng_counter;
+                vector_addr_sig <= vector_addr;
+                start_pos_next_half_sig <= start_pos_next_half;
 
 
                 --
@@ -403,7 +477,7 @@ begin
             --------------------------------------------------------------------------------------
             -- four state (whole datapath is full)
             --------------------------------------------------------------------------------------
-            when ITERATING_FIRST =>            
+            when ITERATING_FIRST =>            -- first half is being written back to app
 
 
                 --
@@ -430,131 +504,139 @@ begin
                 --
                 -- max_app_val or real app val + real shift 
                 --
-                vector_addr := cng_counter * matrix_max_check_degree;   -- base address of row
-
-                -- first half
-
-                for i in 0 to CFU_PAR_LEVEL - 1 loop            --- maybe change order of loop if not storing in correct place
-                    if (matrix_addr(i + vector_addr) < 8) then       
-                        if (i = matrix_addr(i + vector_addr)) then            -- if the value of matrix isn't this 1 but it's not at the end of it
-                            mux_output_app(i) <= std_logic_vector(to_unsigned(0, mux_output_app(0)'length));            
-                            shift(i) <= std_logic_vector(to_unsigned(matrix_shift(i + vector_addr), shift(0)'length));
-                        else
-                            mux_output_app(i) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));            
-                            shift(i) <= std_logic_vector(to_unsigned(0, shift(0)'length));   -- because the matrix has the same values it is indifferent how much we shift 
-                        end if;
-                    else                                        -- this is a value from the second half
-
-                        --store index of matrix where to start from  for second half 
-                        start_pos_next_half := i;  
-
-                        indx := i;
-
-                        -- put the rest of the dummy values to the rest of the APP rams
-                        while indx < CFU_PAR_LEVEL - 1 loop                               
-                            mux_output_app(indx) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));            
-                            shift(indx) <= std_logic_vector(to_unsigned(0, shift(0)'length));   -- because the matrix has the same values it is indifferent how much we shift 
-                            indx := indx + 1;
-                        end loop;
-                        exit;
-                    end if;
-                end loop;
-
-
-                --
-                -- inside CNB
-                --
-                iter <= std_logic_vector(to_unsigned(iter_int, BW_MAX_ITER));
-                for i in 0 to SUBMAT_SIZE - 1 loop
-                    msg_rd_addr(i) <= std_logic_vector(to_unsigned(msg_row, BW_MSG_RAM));
-                end loop;
-                -- increment row in msg ram and retart if we have past the end
-                msg_row := msg_row + 1;
-                if (msg_row = MSG_RAM_DEPTH) then
-                    msg_row := 0;
-                end if;
-
-
-                -- --
-                -- -- next state 
-                -- --
-                nx_state <= ITERATING_SECOND;
-
-
-            --------------------------------------------------------------------------------------
-            -- iterating and outputing second half
-            --------------------------------------------------------------------------------------
-            when ITERATING_SECOND =>
-
-                --
-                -- clock gating for pipeline stages
-                --
-                ena_rp <= '1';
-                ena_ct <= '1';
-                ena_cf <= '1';
-                ena_vc <= '1';
-
-
-                --
-                -- APP RAM
-                --
-                mux_input_app <= (others => '0');
-
-                app_rd_addr_var := not app_rd_addr_var;
-                app_rd_addr <= app_rd_addr_var;
-
-                app_wr_addr_var := not app_wr_addr_var;
-                app_wr_addr <= app_wr_addr_var;
-
-
-                --
-                -- max_app_val or real app val + real shift 
-                --
-                vector_addr := cng_counter * matrix_max_check_degree;   -- base address of row
-
                 -- second half
+                vector_addr := cng_counter * matrix_max_check_degree;   -- base address of row
                 index_row := start_pos_next_half;                   -- start from position in index where value is >= 8 (meaning second half start)
                 for j in 0 to CFU_PAR_LEVEL - 1 loop        -- for all the APP rams
-                    if (index_row < matrix_max_check_degree - 1) then     -- if this is still part of this second half row of the matrix 
-                        if (j = matrix_addr(index_row + vector_addr)) then        -- if this value of the matrix corresponds to this app ram
+                    if (index_row < matrix_max_check_degree) then     -- if this is still part of this second half row of the matrix 
+                        if (j + CFU_PAR_LEVEL = matrix_addr(index_row + vector_addr)) then        -- this value of the matrix corresponds to this app ram
                             mux_output_app(j) <= std_logic_vector(to_unsigned(0, mux_output_app(0)'length));            
                             shift(j) <= std_logic_vector(to_unsigned(matrix_shift(index_row + vector_addr), shift(0)'length));        
+                            index_row := index_row + 1;
                         else 
                             mux_output_app(j) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));            
                             shift(j) <= std_logic_vector(to_unsigned(0, shift(0)'length));   -- because the matrix has the same values it is indifferent how much we shift 
                         end if;
-                        index_row := index_row + 1;
-                    else                                    -- for all the remaining APP rams put out dummy value
-                        mux_output_app(j) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));            
-                        shift(j) <= std_logic_vector(to_unsigned(0, shift(0)'length));   -- because the matrix has the same values it is indifferent how much we shift 
+                    -- else                                    -- for all the remaining APP rams put out dummy value
+                    --     mux_output_app(j) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));            
+                    --     shift(j) <= std_logic_vector(to_unsigned(0, shift(0)'length));   -- it is indifferent how much we shift 
                     end if;
                 end loop;
 
-                -- increment row in matrix
                 cng_counter := cng_counter + 1;
+
                 if (cng_counter = matrix_rows) then
                     cng_counter := 0;
                     last_row := true;
                 end if;
 
 
+                --
+                -- inside CNB
+                --
+                iter <= std_logic_vector(to_unsigned(iter_int, BW_MAX_ITER));
+                for i in 0 to SUBMAT_SIZE - 1 loop
+                    msg_rd_addr(i) <= std_logic_vector(to_unsigned(msg_row_rd, BW_MSG_RAM));
+                    msg_wr_addr(i) <= std_logic_vector(to_unsigned(msg_row_wr, BW_MSG_RAM));
+                end loop;
+                -- increment row in msg ram and retart if we have past the end
+                msg_row_rd := msg_row_rd + 1;
+                msg_row_wr := msg_row_wr + 1;
+                if (msg_row_rd = MSG_RAM_DEPTH) then
+                    msg_row_rd := 0;
+                end if;
+                if (msg_row_wr = MSG_RAM_DEPTH) then
+                    msg_row_wr := 0;
+                end if;
+
+
+
+                --
+                -- signals for debugging
+                --
+                index_row_sig <= index_row;
+                cng_counter_sig <= cng_counter;
+                vector_addr_sig <= vector_addr;
+                start_pos_next_half_sig <= start_pos_next_half;
+
+
+                --
+                -- next state 
+                --
+                nx_state <= ITERATING_SECOND;
+
+
+            --------------------------------------------------------------------------------------
+            -- iterating and outputing second half
+            --------------------------------------------------------------------------------------
+            when ITERATING_SECOND =>                -- second half is being written back to app
+
+                --
+                -- clock gating for pipeline stages
+                --
+                ena_rp <= '1';
+                ena_ct <= '1';
+                ena_cf <= '1';
+                ena_vc <= '1';
+
+
+                --
+                -- APP RAM
+                --
+                mux_input_app <= (others => '0');
+
+                app_rd_addr_var := not app_rd_addr_var;
+                app_rd_addr <= app_rd_addr_var;
+
+                app_wr_addr_var := not app_wr_addr_var;
+                app_wr_addr <= app_wr_addr_var;
+
+
+                --
+                -- max_app_val or real app val + real shift 
+                --
+                -- first half
+                vector_addr := cng_counter * matrix_max_check_degree;   -- base address of row
+                index_row := 0;
+                for i in 0 to CFU_PAR_LEVEL - 1 loop            --- maybe change order of loop if not storing in correct place
+                    -- if (matrix_addr(index_row + vector_addr) < 8) then       
+                    if (index_row < matrix_max_check_degree / 2) then                -- have we check entire first half row values?
+                        if (i = matrix_addr(index_row + vector_addr)) then            -- if the value of matrix isn't this 1 but it's not at the end of it
+                            mux_output_app(i) <= std_logic_vector(to_unsigned(0, mux_output_app(0)'length));            
+                            shift(i) <= std_logic_vector(to_unsigned(matrix_shift(index_row + vector_addr), shift(0)'length));
+                            index_row := index_row + 1;
+                        else
+                            mux_output_app(i) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));            
+                            shift(i) <= std_logic_vector(to_unsigned(0, shift(0)'length));   -- it is indifferent how much we shift 
+                        end if;
+                    else
+                        mux_output_app(i) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));            
+                        shift(i) <= std_logic_vector(to_unsigned(0, shift(0)'length));   -- it is indifferent how much we shift 
+                    end if;
+                end loop;
+
+                start_pos_next_half := index_row;
+
 
                 --
                 -- inside CNB
                 --
-
                 -- set iteration number
                 iter <= std_logic_vector(to_unsigned(iter_int, BW_MAX_ITER));
 
                 -- set all msg address for next cycle
                 for i in 0 to SUBMAT_SIZE - 1 loop
-                    msg_rd_addr(i) <= std_logic_vector(to_unsigned(msg_row, BW_MSG_RAM));
+                    msg_rd_addr(i) <= std_logic_vector(to_unsigned(msg_row_rd, BW_MSG_RAM));
+                    msg_wr_addr(i) <= std_logic_vector(to_unsigned(msg_row_wr, BW_MSG_RAM));
                 end loop;
-
                 -- increment row in msg ram and retart if we have past the end
-                msg_row := msg_row + 1;
-                if (msg_row = MSG_RAM_DEPTH) then
-                    msg_row := 0;
+                msg_row_rd := msg_row_rd + 1;
+                msg_row_wr := msg_row_wr + 1;
+                if (msg_row_rd = MSG_RAM_DEPTH) then
+                    msg_row_rd := 0;
+                end if;
+                if (msg_row_wr = MSG_RAM_DEPTH) then
+                    msg_row_wr := 0;
                 end if;
 
 
@@ -581,17 +663,27 @@ begin
 
 
                 --
+                -- signals for debugging
+                --
+                index_row_sig <= index_row;
+                cng_counter_sig <= cng_counter;
+                vector_addr_sig <= vector_addr;
+                start_pos_next_half_sig <= start_pos_next_half;
+
+                --
                 -- next state 
                 --
                 if (last_row = true) then
-                    ok_checks := 0;
                     if (iter_int = 10 or ok_checks = matrix_rows * SUBMAT_SIZE) then
                         iter_int := 0;
                         if (ok_checks =  matrix_rows * SUBMAT_SIZE) then
+                            ok_checks := 0;
                             valid_output <= '1';
                         end if;
                         nx_state <= FINISHING_ITER;
                     else
+                        ok_checks := 0;
+                        last_row := false;
                         nx_state <= ITERATING_FIRST;
                     end if;
                 else

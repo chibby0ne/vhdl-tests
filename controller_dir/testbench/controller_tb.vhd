@@ -17,6 +17,8 @@ use work.pkg_support.all;
 use work.pkg_types.all;
 use work.pkg_param.all;
 use work.pkg_param_derived.all;
+use work.pkg_ieee_802_11ad_matrix.all;
+use work.pkg_ieee_802_11ad_param.all;
 
 
 --------------------------------------------------------
@@ -77,9 +79,50 @@ architecture circuit of controller_tb is
     file fin: text open read_mode is "input_controller.txt";
     -- file fout: text open read_mode is "output_controller.txt";
    
+
+    -- signals used for determining matrices and its properties
+    signal matrix_addr: t_array64 := (others => 0);      
+    signal matrix_shift: t_array64 := (others => 0);
+    signal matrix_length: natural range 0 to 64;
+    signal matrix_rows: natural range 0 to 8:= 1;
+    signal matrix_max_check_degree: natural range 0 to 16;
     
 begin
+
     
+    --------------------------------------------------------------------------------------
+    -- signals used for verification
+    --------------------------------------------------------------------------------------
+    
+    gen_matrix_addr: for i in 0 to 63 generate
+        matrix_addr(i) <= IEEE_802_11AD_P42_N672_R050_ADDR(i) when code_rate_tb = R050 else 
+                          IEEE_802_11AD_P42_N672_R062_ADDR(i) when i < 60 else -1 when code_rate_tb = R062 else
+                          IEEE_802_11AD_P42_N672_R075_ADDR(i) when i < 60 else -1 when code_rate_tb = R075 else
+                          IEEE_802_11AD_P42_N672_R081_ADDR(i) when i < 48 else -1 when code_rate_tb = R081;
+    end generate gen_matrix_addr;
+
+
+    gen_matrix_shift: for i in 0 to 63 generate
+        matrix_shift(i) <= IEEE_802_11AD_P42_N672_R050_SHIFT(i) when code_rate_tb = R050 else 
+                           IEEE_802_11AD_P42_N672_R062_SHIFT(i) when i < 60 else -1 when code_rate_tb = R062 else
+                           IEEE_802_11AD_P42_N672_R075_SHIFT(i) when i < 60 else -1 when code_rate_tb = R075 else
+                           IEEE_802_11AD_P42_N672_R081_SHIFT(i) when i < 48 else -1 when code_rate_tb = R081;
+    end generate gen_matrix_shift;
+
+    matrix_length <= IEEE_802_11AD_P42_N672_R050_ADDR'length when code_rate_tb = R050 else
+                     IEEE_802_11AD_P42_N672_R062_ADDR'length when code_rate_tb = R062 else
+                     IEEE_802_11AD_P42_N672_R075_ADDR'length when code_rate_tb = R075 else
+                     IEEE_802_11AD_P42_N672_R081_ADDR'length;
+
+    matrix_rows <= R050_ROWS when code_rate_tb = R050 else
+                   R062_ROWS when code_rate_tb = R062 else
+                   R075_ROWS when code_rate_tb = R075 else
+                   R081_ROWS;
+
+    matrix_max_check_degree <= matrix_length / matrix_rows;
+
+
+
     --------------------------------------------------------------------------------------
     -- dut instantiation
     --------------------------------------------------------------------------------------
@@ -114,7 +157,13 @@ begin
 
 
     -- rst
-    rst_tb <= '0';
+    process
+    begin
+        rst_tb <= '1';
+        wait for PERIOD;
+        rst_tb <= '0';
+        wait;
+    end process;
 
 
     -- code rate
@@ -131,7 +180,8 @@ begin
         if (not endfile(fin)) then
             if (first = false) then
                 first := true;
-                wait for PERIOD / 2 + PERIOD * 3;
+                wait for PERIOD / 2 + PERIOD * 4;
+                wait for PD;
             else
                 wait for PERIOD;
             end if;
@@ -145,10 +195,11 @@ begin
                 end if;
             end loop;
         else
-            wait for PERIOD / 2;
-            assert false
-            report "no errors"
-            severity failure;
+            wait;
+            -- wait for PERIOD / 2;
+            -- assert false
+            -- report "no errors"
+            -- severity failure;
         end if;
 
 
@@ -162,19 +213,251 @@ begin
 
     
     -- ena_vc
+    process
+    begin
+        wait for PD;
+        assert ena_vc_tb = '0'
+        report "error ena_vc_tb at time " & time'image(now)
+        severity failure;
+
+        wait for PERIOD + PERIOD / 2;
+        assert ena_vc_tb = '1'
+        report "error ena_vc_tb at time " & time'image(now)
+        severity failure;
+        
+        wait for PERIOD * 2;
+        assert ena_vc_tb = '0'
+        report "error ena_vc_tb at time " & time'image(now)
+        severity failure;
+
+        wait for PERIOD;
+        assert ena_vc_tb = '1'
+        report "error ena_vc_tb at time " & time'image(now)
+        severity failure;
+        
+        wait for PERIOD * 10;
+        assert ena_vc_tb = '1'
+        report "error ena_vc_tb at time " & time'image(now)
+        severity failure;
+        
+        wait;
+
+    end process;
 
 
     
     -- ena_rp
+    process
+    begin
+        wait for PD;
+        assert ena_rp_tb = '0'
+        report "error ena_rp_tb at time " & time'image(now)
+        severity failure;
+
+        wait for PERIOD + PERIOD / 2;
+        assert ena_rp_tb = '1'
+        report "error ena_rp_tb at time " & time'image(now)
+        severity failure;
+        
+        wait for PERIOD * 2;
+        assert ena_rp_tb = '1'
+        report "error ena_rp_tb at time " & time'image(now)
+        severity failure;
+
+        wait for PERIOD;
+        assert ena_rp_tb = '1'
+        report "error ena_rp_tb at time " & time'image(now)
+        severity failure;
+        
+        wait for PERIOD * 10;
+        assert ena_rp_tb = '1'
+        report "error ena_rp_tb at time " & time'image(now)
+        severity failure;
+
+        wait;
+    end process;
+
 
 
     
     -- ena_ct
+    process
+    begin
+        wait for PD;
+        assert ena_ct_tb = '0'
+        report "error ena_ct_tb at time " & time'image(now)
+        severity failure;
 
+        wait for PERIOD * 2 + PERIOD / 2;
+        assert ena_ct_tb = '1'
+        report "error ena_ct_tb at time " & time'image(now)
+        severity failure;
+
+        wait for PERIOD;
+        assert ena_ct_tb = '1'
+        report "error ena_ct_tb at time " & time'image(now)
+        severity failure;
+        
+        wait for PERIOD * 10;
+        assert ena_ct_tb = '1'
+        report "error ena_ct_tb at time " & time'image(now)
+        severity failure;
+
+        wait;
+    end process;
 
     
     -- ena_cf
+    process
+    begin
+        wait for PD;
+        assert ena_cf_tb = '0'
+        report "error ena_cf_tb at time " & time'image(now)
+        severity failure;
+
+        wait for PERIOD * 3 + PERIOD / 2;
+        assert ena_cf_tb = '1'
+        report "error ena_cf_tb at time " & time'image(now)
+        severity failure;
+
+        wait for PERIOD;
+        assert ena_cf_tb = '1'
+        report "error ena_cf_tb at time " & time'image(now)
+        severity failure;
+        
+        wait for PERIOD * 10;
+        assert ena_cf_tb = '1'
+        report "error ena_cf_tb at time " & time'image(now)
+        severity failure;
+
+        wait;
+
+    end process;
 
 
-    
+
+    -- mux_output_app and shift
+    process
+        variable iter_int: integer range 0 to 10 := 0;
+        variable rows: integer range 0 to 8 := 0;
+        variable halves: integer range 0 to 2 := 0;
+        variable first: boolean := false;
+        variable state: integer := 0;
+        variable index_addr: integer range 0 to 64 := 0;
+
+        
+        
+    begin
+        while iter_int < 10 loop            -- for all iterations
+
+            while rows < matrix_rows loop   -- for all rows
+
+                while halves < 2 loop
+
+                    -- delays
+                    if (first = false) then
+                        first := true;
+                        wait for PERIOD + PERIOD / 2 + PD;
+                    else
+                        wait for PERIOD;
+                    end if;
+
+
+
+                    for i in 0 to CFU_PAR_LEVEL - 1 loop        -- for all row entries
+
+                        if (state mod 2 = 0) then                 -- first half
+
+                            while (matrix_addr(index_addr) = -1) loop
+                                index_addr := index_addr + 1;
+                            end loop;
+
+                            if (i = matrix_addr(index_addr)) then           --  is valid entry
+
+                                if (state < 2) then                         -- loading codewords
+                                    assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(2, mux_output_app_tb(0)'length))
+                                    report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") at time = " & time'image(now)
+                                    severity failure;
+
+                                else                                        -- cnb full / iterating
+                                    assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(0, mux_output_app_tb(0)'length))
+                                    report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") at time = " & time'image(now)
+                                    severity failure;
+                                end if;                 -- end if (state < 2)
+
+                                assert shift_tb(i) = std_logic_vector(to_unsigned(matrix_shift(index_addr), shift_tb(0)'length))
+                                report "output mismatch with shift_tb(" & integer'image(i) & ") at time = " & time'image(now)
+                                severity failure;
+
+                                index_addr := index_addr + 1;
+
+                            else                                            -- dummy value
+                                assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(1, mux_output_app_tb(0)'length))
+                                report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") at time = " & time'image(now)
+                                severity failure;
+
+                                assert shift_tb(i) = std_logic_vector(to_unsigned(0, shift_tb(0)'length))
+                                report "output mismatch with shift_tb(" & integer'image(i) & ") at time = " & time'image(now)
+                                severity failure;
+                            end if;                             -- end if is valid entry
+
+                        else                                            -- second half
+
+                            if (i + matrix_max_check_degree = matrix_addr(index_addr)) then  -- is valid entry
+
+                                if (state < 2) then                 -- loading codewords
+                                    assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(2, mux_output_app_tb(0)'length))
+                                    report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") at time = " & time'image(now)
+                                    severity failure;
+                                else                                -- cnb full / iterating
+                                    assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(0, mux_output_app_tb(0)'length))
+                                    report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") at time = " & time'image(now)
+                                    severity failure;
+                                end if;
+
+                                assert shift_tb(i) = std_logic_vector(to_unsigned(matrix_shift(index_addr), shift_tb(0)'length))
+                                report "output mismatch with shift_tb(" & integer'image(i) & ") at time = " & time'image(now)
+                                severity failure;
+
+                                index_addr := index_addr + 1;
+
+                            else                                    -- dummy values
+                                assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(1, mux_output_app_tb(0)'length))
+                                report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") at time = " & time'image(now)
+                                severity failure;
+
+                                assert shift_tb(i) = std_logic_vector(to_unsigned(0, shift_tb(0)'length))
+                                report "output mismatch with shift_tb(" & integer'image(i) & ") at time = " & time'image(now)
+                                severity failure;
+                            end if;
+
+
+                        end if;                                 -- end if which half
+
+                    end loop;       -- for loop each element in array
+
+
+                    state := state + 1;
+
+                    halves := halves + 1;
+
+                end loop;   -- while halves < 2
+
+                halves := 0;
+                rows := rows + 1;
+
+            end loop;       -- while rows < matrix_rows
+
+            rows := 0;
+            index_addr := 0;
+            iter_int := iter_int + 1;
+
+        end loop;       -- while iters < 10
+
+        assert false
+        report "no errors"
+        severity failure;
+
+    end process;
+
 end architecture circuit;
