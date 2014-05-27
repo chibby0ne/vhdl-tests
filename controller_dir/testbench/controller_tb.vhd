@@ -47,10 +47,10 @@ architecture circuit of controller_tb is
         iter: out t_iter;
         app_rd_addr: out std_logic;
         app_wr_addr: out std_logic;
-        msg_rd_addr: out t_msg_addr_contr;
-        msg_wr_addr: out t_msg_addr_contr;
+        msg_rd_addr: out t_msg_ram_addr;
+        msg_wr_addr: out t_msg_ram_addr;
         shift: out t_shift_contr;
-        mux_input_app: out std_logic_vector(CFU_PAR_LEVEL - 1 downto 0);        -- mux at input of app rams used for storing (0 = CNB, 1 = new code)
+        mux_input_app: out std_logic;        -- mux at input of app rams used for storing (0 = CNB, 1 = new code)
         mux_output_app: out t_mux_out_app                    -- mux output of appram used for selecting input of CNB (0 = app, 1 = dummy, 2 = new_code)
         );
     end component controller;
@@ -70,10 +70,10 @@ architecture circuit of controller_tb is
     signal iter_tb: t_iter; 
     signal app_rd_addr_tb: std_logic;
     signal app_wr_addr_tb: std_logic;
-    signal msg_rd_addr_tb: t_msg_addr_contr;
-    signal msg_wr_addr_tb: t_msg_addr_contr;
+    signal msg_rd_addr_tb: t_msg_ram_addr;
+    signal msg_wr_addr_tb: t_msg_ram_addr;
     signal shift_tb: t_shift_contr;
-    signal mux_input_app_tb: std_logic_vector(CFU_PAR_LEVEL - 1 downto 0);
+    signal mux_input_app_tb: std_logic;
     signal mux_output_app_tb: t_mux_out_app;
     
     file fin: text open read_mode is "input_controller.txt";
@@ -196,14 +196,11 @@ begin
             end loop;
         else
             wait;
-            -- wait for PERIOD / 2;
-            -- assert false
-            -- report "no errors"
-            -- severity failure;
         end if;
 
 
     end process;
+
 
 
     
@@ -248,33 +245,28 @@ begin
     
     -- ena_rp
     process
+        variable count: integer range 0 to 300 := 0;
+        
     begin
-        wait for PD;
-        assert ena_rp_tb = '0'
-        report "error ena_rp_tb at time " & time'image(now)
-        severity failure;
+        if (count < 3) then                 -- PD + 3 * PERIOD / 2
+            if (count = 0) then
+                wait for PD;
+            else
+                wait for PERIOD / 2;
+            end if;
+            assert ena_rp_tb = '0'
+            report "error ena_rp_tb at time " & time'image(now)
+            severity failure;
+        elsif (count < 160) then
+            wait for PERIOD / 2;
+            assert ena_rp_tb = '1'
+            report "error ena_rp_tb at time " & time'image(now)
+            severity failure;
+        else
+            wait;
+        end if;
+        count := count + 1;
 
-        wait for PERIOD + PERIOD / 2;
-        assert ena_rp_tb = '1'
-        report "error ena_rp_tb at time " & time'image(now)
-        severity failure;
-        
-        wait for PERIOD * 2;
-        assert ena_rp_tb = '1'
-        report "error ena_rp_tb at time " & time'image(now)
-        severity failure;
-
-        wait for PERIOD;
-        assert ena_rp_tb = '1'
-        report "error ena_rp_tb at time " & time'image(now)
-        severity failure;
-        
-        wait for PERIOD * 10;
-        assert ena_rp_tb = '1'
-        report "error ena_rp_tb at time " & time'image(now)
-        severity failure;
-
-        wait;
     end process;
 
 
@@ -282,58 +274,296 @@ begin
     
     -- ena_ct
     process
+        variable count: integer range 0 to 200 := 0;
     begin
-        wait for PD;
-        assert ena_ct_tb = '0'
-        report "error ena_ct_tb at time " & time'image(now)
-        severity failure;
-
-        wait for PERIOD * 2 + PERIOD / 2;
-        assert ena_ct_tb = '1'
-        report "error ena_ct_tb at time " & time'image(now)
-        severity failure;
-
-        wait for PERIOD;
-        assert ena_ct_tb = '1'
-        report "error ena_ct_tb at time " & time'image(now)
-        severity failure;
-        
-        wait for PERIOD * 10;
-        assert ena_ct_tb = '1'
-        report "error ena_ct_tb at time " & time'image(now)
-        severity failure;
-
-        wait;
+        if (count < 5) then             -- PD + 4 * PERIOD / 2
+            if (count = 0) then
+                wait for PD;
+            else
+                wait for PERIOD / 2;
+            end if;
+            assert ena_ct_tb = '0'
+            report "error ena_ct_tb at time " & time'image(now)
+            severity failure;
+        elsif (count < 160) then
+            wait for PERIOD;
+            assert ena_ct_tb = '1'
+            report "error ena_ct_tb at time " & time'image(now)
+            severity failure;
+        else
+            wait;
+        end if;
+        count := count + 1;
     end process;
 
-    
+
     -- ena_cf
     process
+        variable count: integer range 0 to 200 := 0;
     begin
-        wait for PD;
-        assert ena_cf_tb = '0'
-        report "error ena_cf_tb at time " & time'image(now)
-        severity failure;
-
-        wait for PERIOD * 3 + PERIOD / 2;
-        assert ena_cf_tb = '1'
-        report "error ena_cf_tb at time " & time'image(now)
-        severity failure;
-
-        wait for PERIOD;
-        assert ena_cf_tb = '1'
-        report "error ena_cf_tb at time " & time'image(now)
-        severity failure;
-        
-        wait for PERIOD * 10;
-        assert ena_cf_tb = '1'
-        report "error ena_cf_tb at time " & time'image(now)
-        severity failure;
-
-        wait;
+        if (count < 6) then             -- PD + 5  * PERIOD / 2
+            if (count = 0) then
+                wait for PD;
+            else
+                wait for PERIOD / 2;
+            end if;
+            assert ena_cf_tb = '0'
+            report "error ena_cf_tb at time " & time'image(now)
+            severity failure;
+        elsif (count < 160) then
+            wait for PERIOD;
+            assert ena_cf_tb = '1'
+            report "error ena_cf_tb at time " & time'image(now)
+            severity failure;
+        else
+            wait;
+        end if;
+        count := count + 1;
 
     end process;
 
+
+    -- valid output 
+    process
+    begin
+        wait for PERIOD / 2  + PERIOD * 8;
+        valid_output_tb <= '0';
+        wait;
+    end process;
+
+
+    -- iter
+    process
+        variable count: integer range 0 to 16 := 0;
+        variable first_word: boolean := false;
+        variable periods: integer range 0 to 200 := 0;
+    begin
+        if (count = 0) then
+            if (first_word = false) then
+                first_word := true;
+                wait for PD;
+            end if;
+            wait for PERIOD / 2 + PERIOD;
+        else
+            wait for PERIOD * 16;
+        end if;
+
+        assert iter_tb = std_logic_vector(to_unsigned(count, iter_tb'length))
+        report "iter should be " & integer'image(count) 
+        severity failure;
+
+        count := count + 1;
+        if (count = 10) then
+            count := 0;
+            wait;
+        end if;
+    end process;
+
+
+    -- app_rd_addr
+    process
+        variable count: integer range 0 to 10 := 0;
+        variable periods: integer range 0 to 200 := 0;
+        variable first_word: boolean := false;
+
+    begin
+        if (periods < 159) then
+            if (count = 0) then
+                if (first_word = false) then
+                    first_word := true;
+                    wait for PD;
+                end if;
+                wait for PERIOD / 2 +  3 * PERIOD;
+            else
+                wait for PERIOD;
+            end if;
+            if (count mod 2 = 0) then
+                assert app_rd_addr_tb = '0'
+                report "app_rd_addr_tb should be " & integer'image(0)
+                severity failure;
+            else
+                assert app_rd_addr_tb = '1'
+                report "app_rd_addr_tb should be " & integer'image(1)
+                severity failure;
+            end if;
+            count := count + 1;
+            if (count = 10) then
+                count := 2;
+            end if;
+            periods := periods + 1;
+        else
+            periods := 0;
+            count := 0;
+
+            wait for PERIOD;
+            assert app_rd_addr_tb = '0'
+            report "app_rd_addr_tb should be " & integer'image(0)
+            severity failure;
+        end if;
+    end process;
+
+
+    -- app_wr_addr
+    process
+        variable count: integer range 0 to 10 := 0;
+        variable periods: integer range 0 to 200 := 0;
+        variable first_word: boolean := false;
+
+    begin
+        if (periods < 159) then
+            if (count = 0) then
+                if (first_word = false) then
+                    first_word := true;
+                    wait for PD;
+                end if;
+                wait for PERIOD / 2 +  3 * PERIOD;
+            else
+                wait for PERIOD;
+            end if;
+            if (count mod 2 = 0) then
+                assert app_wr_addr_tb = '1'
+                report "app_wr_addr_tb should be " & integer'image(1)
+                severity failure;
+            else
+                assert app_wr_addr_tb = '0'
+                report "app_wr_addr_tb should be " & integer'image(0)
+                severity failure;
+            end if;
+            count := count + 1;
+            if (count = 10) then
+                count := 2;
+            end if;
+            periods := periods + 1;
+        else
+            periods := 0;
+            count := 0;
+
+            wait for PERIOD;
+            assert app_wr_addr_tb = '0'
+            report "app_wr_addr_tb should be " & integer'image(0)
+            severity failure;
+        end if;
+
+    end process;
+
+
+    -- msg_rd_addr
+    process
+        variable count: integer range 0 to 16 := 0;
+        variable first: boolean := false;
+        variable first_word: boolean := false;
+        variable periods: integer range 0 to 200 := 0;
+
+
+    begin
+        if (periods < 160) then
+            if (first = false) then
+                first := true;
+                if (first_word = false) then
+                    first_word := true;
+                    wait for PD;
+                end if;
+                wait for PERIOD / 2 +  PERIOD;
+            else
+                wait for PERIOD;
+            end if;
+            assert msg_rd_addr_tb = std_logic_vector(to_unsigned(count, msg_rd_addr_tb'length))
+            report "msg_rd_addr should be " & integer'image(count)
+            severity failure;
+            count := count + 1;
+            if (count = 2 * matrix_rows) then
+                count := 0;
+            end if;
+            periods := periods + 1;
+        else
+            periods := 0;
+            first := false;
+
+            wait for PERIOD;
+            assert msg_rd_addr_tb = std_logic_vector(to_unsigned(count, msg_rd_addr_tb'length))
+            report "msg_rd_addr should be " & integer'image(count)
+            severity failure;
+
+            count := 0;
+
+        end if;
+
+    end process;
+
+
+    -- msg_wr_addr
+    process
+        variable count: integer range 0 to 16 := 0;
+        variable first: boolean := false;
+        variable periods: integer range 0 to 200 := 0;
+        variable first_word: boolean := false;
+
+    begin
+        if (periods < 159) then
+            if (first = false) then
+                first := true;
+                if (first_word = false) then
+                    first_word := true;
+                    wait for PD;
+                end if;
+                wait for PERIOD / 2 + PERIOD * 3;
+            else
+                wait for PERIOD;
+            end if;
+            assert msg_wr_addr_tb = std_logic_vector(to_unsigned(count, msg_wr_addr_tb'length))
+            report "msg_wr_addr should be " & integer'image(count)
+            severity failure;
+            count := count + 1;
+            if (count = 2 * matrix_rows) then
+                count := 0;
+            end if;
+            periods := periods+ 1;
+        else
+            periods := 0;
+            first := false;
+
+            wait for PERIOD;
+            assert msg_wr_addr_tb = std_logic_vector(to_unsigned(count - 1, msg_wr_addr_tb'length))
+            report "msg_wr_addr should be " & integer'image(count - 1)
+            severity failure;
+
+            count := 0;
+
+        end if;
+    end process;
+
+
+    -- mux_input_app
+    process
+        variable periods: integer range 0 to 200 := 0;
+        variable first_word: boolean := false;
+
+    begin
+        if (periods = 162) then
+            periods := 0;
+        end if;
+        if (periods = 0) then
+            if (first_word = false) then
+                first_word := true;
+                wait for PD;
+            end if;
+            wait for PERIOD / 2 + PERIOD;
+            assert mux_input_app_tb = '1'
+            report "mux_input_app_tb should be " & integer'image(1)
+            severity failure;
+        elsif (periods = 1) then
+            wait for PERIOD;
+            assert mux_input_app_tb = '1'
+            report "mux_input_app_tb should be " & integer'image(1)
+            severity failure;
+        else
+            wait for PERIOD;
+            assert mux_input_app_tb = '0'
+            report "mux_input_app_tb should be " & integer'image(0)
+            severity failure;
+        end if;
+        periods := periods + 1;
+    end process;
 
 
     -- mux_output_app and shift
@@ -345,114 +575,222 @@ begin
         variable state: integer := 0;
         variable index_addr: integer range 0 to 64 := 0;
 
+        variable times: integer range 0 to 2 := 0;
+        variable first_word: boolean := false;
         
-        
+
+
     begin
-        while iter_int < 10 loop            -- for all iterations
+        while times < 2 loop
+            iter_int := 0;
+            rows := 0;
+            halves := 0;
+            state := 0;
+            index_addr := 0;
 
-            while rows < matrix_rows loop   -- for all rows
+            while iter_int < 10 loop            -- for all iterations
 
-                while halves < 2 loop
+                while rows < matrix_rows loop   -- for all rows
 
-                    -- delays
-                    if (first = false) then
-                        first := true;
-                        wait for PERIOD + PERIOD / 2 + PD;
-                    else
-                        wait for PERIOD;
-                    end if;
+                    while halves < 2 loop
+
+                            -- delays
+                        if (first = false) then
+                            first := true;
+                            if (first_word = false) then
+                                first_word := true;
+                                wait for PD;
+                            end if;
+                            wait for PERIOD + PERIOD / 2;
+                        else
+                            wait for PERIOD;
+                        end if;
 
 
 
-                    for i in 0 to CFU_PAR_LEVEL - 1 loop        -- for all row entries
+                        for i in 0 to CFU_PAR_LEVEL - 1 loop        -- for all row entries
 
-                        if (state mod 2 = 0) then                 -- first half
+                            if (state mod 2 = 0) then                 -- first half
 
-                            while (matrix_addr(index_addr) = -1) loop
-                                index_addr := index_addr + 1;
-                            end loop;
+                                while (matrix_addr(index_addr) = -1) loop
+                                    index_addr := index_addr + 1;
+                                end loop;
 
-                            if (i = matrix_addr(index_addr)) then           --  is valid entry
+                                if (i = matrix_addr(index_addr)) then           --  is valid entry
 
-                                if (state < 2) then                         -- loading codewords
-                                    assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(2, mux_output_app_tb(0)'length))
-                                    report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") at time = " & time'image(now)
+                                    if (state < 2) then                         -- loading codewords
+                                        assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(2, mux_output_app_tb(0)'length))
+                                        report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") should be " & integer'image(2) 
+                                        severity failure;
+
+                                    else                                        -- cnb full / iterating
+                                        assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(0, mux_output_app_tb(0)'length))
+                                        report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") should be " & integer'image(0) 
+                                        severity failure;
+                                    end if;                 -- end if (state < 2)
+
+                                    assert shift_tb(i) = std_logic_vector(to_unsigned(matrix_shift(index_addr), shift_tb(0)'length))
+                                    report "output mismatch with shift_tb(" & integer'image(i) & ") should be " & integer'image(matrix_shift(index_addr))
                                     severity failure;
 
-                                else                                        -- cnb full / iterating
-                                    assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(0, mux_output_app_tb(0)'length))
-                                    report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") at time = " & time'image(now)
+                                    index_addr := index_addr + 1;
+
+                                else                                            -- dummy value
+                                    assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(1, mux_output_app_tb(0)'length))
+                                    report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") should be " & integer'image(1) 
                                     severity failure;
-                                end if;                 -- end if (state < 2)
 
-                                assert shift_tb(i) = std_logic_vector(to_unsigned(matrix_shift(index_addr), shift_tb(0)'length))
-                                report "output mismatch with shift_tb(" & integer'image(i) & ") at time = " & time'image(now)
-                                severity failure;
-
-                                index_addr := index_addr + 1;
-
-                            else                                            -- dummy value
-                                assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(1, mux_output_app_tb(0)'length))
-                                report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") at time = " & time'image(now)
-                                severity failure;
-
-                                assert shift_tb(i) = std_logic_vector(to_unsigned(0, shift_tb(0)'length))
-                                report "output mismatch with shift_tb(" & integer'image(i) & ") at time = " & time'image(now)
-                                severity failure;
-                            end if;                             -- end if is valid entry
-
-                        else                                            -- second half
-
-                            if (i + matrix_max_check_degree = matrix_addr(index_addr)) then  -- is valid entry
-
-                                if (state < 2) then                 -- loading codewords
-                                    assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(2, mux_output_app_tb(0)'length))
-                                    report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") at time = " & time'image(now)
+                                    assert shift_tb(i) = std_logic_vector(to_unsigned(0, shift_tb(0)'length))
+                                    report "output mismatch with shift_tb(" & integer'image(i) & ") should be " & integer'image(0)
                                     severity failure;
-                                else                                -- cnb full / iterating
-                                    assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(0, mux_output_app_tb(0)'length))
-                                    report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") at time = " & time'image(now)
+                                end if;                             -- end if is valid entry
+
+                            else                                            -- second half
+
+                                if (i + matrix_max_check_degree = matrix_addr(index_addr)) then  -- is valid entry
+
+                                    if (state < 2) then                 -- loading codewords
+                                        assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(2, mux_output_app_tb(0)'length))
+                                        report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") should be " & integer'image(2)
+                                        severity failure;
+                                    else                                -- cnb full / iterating
+                                        assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(0, mux_output_app_tb(0)'length))
+                                        report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") should be " & integer'image(0)
+                                        severity failure;
+                                    end if;
+
+                                    assert shift_tb(i) = std_logic_vector(to_unsigned(matrix_shift(index_addr), shift_tb(0)'length))
+                                    report "output mismatch with shift_tb(" & integer'image(i) & ") should be " & integer'image(matrix_shift(index_addr))
+                                    severity failure;
+
+                                    index_addr := index_addr + 1;
+
+                                else                                    -- dummy values
+                                    assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(1, mux_output_app_tb(0)'length))
+                                    report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") should be " & integer'image(1)
+                                    severity failure;
+
+                                    assert shift_tb(i) = std_logic_vector(to_unsigned(0, shift_tb(0)'length))
+                                    report "output mismatch with shift_tb(" & integer'image(i) & ") should be " & integer'image(0)
                                     severity failure;
                                 end if;
 
-                                assert shift_tb(i) = std_logic_vector(to_unsigned(matrix_shift(index_addr), shift_tb(0)'length))
-                                report "output mismatch with shift_tb(" & integer'image(i) & ") at time = " & time'image(now)
-                                severity failure;
 
-                                index_addr := index_addr + 1;
+                            end if;                                 -- end if which half
 
-                            else                                    -- dummy values
-                                assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(1, mux_output_app_tb(0)'length))
-                                report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") at time = " & time'image(now)
-                                severity failure;
-
-                                assert shift_tb(i) = std_logic_vector(to_unsigned(0, shift_tb(0)'length))
-                                report "output mismatch with shift_tb(" & integer'image(i) & ") at time = " & time'image(now)
-                                severity failure;
-                            end if;
+                        end loop;       -- for loop each element in array
 
 
-                        end if;                                 -- end if which half
+                        state := state + 1;
 
-                    end loop;       -- for loop each element in array
+                        halves := halves + 1;
+
+                    end loop;   -- while halves < 2
+
+                    halves := 0;
+                    rows := rows + 1;
+
+                end loop;       -- while rows < matrix_rows
+
+                rows := 0;
+                index_addr := 0;
+                iter_int := iter_int + 1;
+
+            end loop;       -- while iters < 10 for all iterations
+
+            iter_int := 0;
+            times := times + 1;
+
+            report "times = " & integer'image(times) & " at time " & time'image(now);
+            report "state = " & integer'image(state) & " at time " & time'image(now);
+
+            wait for PERIOD;
+            
+            for i in 0 to CFU_PAR_LEVEL - 1 loop        -- for all row entries
+
+                if (state mod 2 = 0) then                 -- first half
+
+                    while (matrix_addr(index_addr) = -1) loop
+                        index_addr := index_addr + 1;
+                    end loop;
+
+                    if (i = matrix_addr(index_addr)) then           --  is valid entry
+
+                        if (state < 2) then                         -- loading codewords
+                            assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(2, mux_output_app_tb(0)'length))
+                            report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") should be " & integer'image(2) 
+                            severity failure;
+
+                        else                                        -- cnb full / iterating
+                            assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(0, mux_output_app_tb(0)'length))
+                            report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") should be " & integer'image(0) 
+                            severity failure;
+                        end if;                 -- end if (state < 2)
+
+                        assert shift_tb(i) = std_logic_vector(to_unsigned(matrix_shift(index_addr), shift_tb(0)'length))
+                        report "output mismatch with shift_tb(" & integer'image(i) & ") should be " & integer'image(matrix_shift(index_addr))
+                        severity failure;
+
+                        index_addr := index_addr + 1;
+
+                    else                                            -- dummy value
+                        assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(1, mux_output_app_tb(0)'length))
+                        report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") should be " & integer'image(1) 
+                        severity failure;
+
+                        assert shift_tb(i) = std_logic_vector(to_unsigned(0, shift_tb(0)'length))
+                        report "output mismatch with shift_tb(" & integer'image(i) & ") should be " & integer'image(0)
+                        severity failure;
+                    end if;                             -- end if is valid entry
+
+                else                                            -- second half
+
+                    if (i + matrix_max_check_degree = matrix_addr(index_addr)) then  -- is valid entry
+
+                        if (state < 2) then                 -- loading codewords
+                            assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(2, mux_output_app_tb(0)'length))
+                            report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") should be " & integer'image(2)
+                            severity failure;
+                        else                                -- cnb full / iterating
+                            assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(0, mux_output_app_tb(0)'length))
+                            report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") should be " & integer'image(0)
+                            severity failure;
+                        end if;
+
+                        assert shift_tb(i) = std_logic_vector(to_unsigned(matrix_shift(index_addr), shift_tb(0)'length))
+                        report "output mismatch with shift_tb(" & integer'image(i) & ") should be " & integer'image(matrix_shift(index_addr))
+                        severity failure;
+
+                        index_addr := index_addr + 1;
+
+                    else                                    -- dummy values
+                        assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(1, mux_output_app_tb(0)'length))
+                        report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") should be " & integer'image(1)
+                        severity failure;
+
+                        assert shift_tb(i) = std_logic_vector(to_unsigned(0, shift_tb(0)'length))
+                        report "output mismatch with shift_tb(" & integer'image(i) & ") should be " & integer'image(0)
+                        severity failure;
+                    end if;
 
 
-                    state := state + 1;
+                end if;                                 -- end if which half
 
-                    halves := halves + 1;
+            end loop;       -- for loop each element in array
 
-                end loop;   -- while halves < 2
+            wait for PERIOD;
 
-                halves := 0;
-                rows := rows + 1;
+            for i in 0 to CFU_PAR_LEVEL - 1 loop
+                assert mux_output_app_tb(i) = std_logic_vector(to_unsigned(0, mux_output_app_tb(0)'length))
+                report "output mismatch with mux_output_app_tb(" & integer'image(i) & ") should be " & integer'image(0) 
+                severity failure;
 
-            end loop;       -- while rows < matrix_rows
+                assert shift_tb(i) = std_logic_vector(to_unsigned(0, shift_tb(0)'length))
+                report "output mismatch with shift_tb(" & integer'image(i) & ") should be " & integer'image(0)
+                severity failure;
+            end loop;
 
-            rows := 0;
-            index_addr := 0;
-            iter_int := iter_int + 1;
-
-        end loop;       -- while iters < 10
+        end loop;           -- times  < 2
 
         assert false
         report "no errors"
