@@ -47,7 +47,7 @@ end entity controller;
 architecture circuit of controller is
 
     -- signals used in FSM
-    type state is (START_RESET, START_STORE_FIRST_HALF, START_STORE_SECOND_HALF, CNB_INPUT_FULL, ITERATING_FIRST, ITERATING_SECOND);
+    type state is (START_RESET, START_STORE_FIRST_HALF, START_STORE_SECOND_HALF, CNB_INPUT_FULL, ITERATING_FIRST, ITERATING_SECOND, FINISHING_ITER);
     signal pr_state: state;
     signal nx_state: state;
     attribute enum_encoding: string;
@@ -79,11 +79,9 @@ architecture circuit of controller is
     signal cng_counter_sig: natural := 0;
     signal vector_addr_sig: natural := 0;
     signal start_pos_next_half_sig: natural := 0;
+    signal ok_checks_sig: integer := 0;
     
     
-
-    
-
 begin
 
     --------------------------------------------------------------------------------------
@@ -172,15 +170,16 @@ begin
         -- aux
         variable val: integer range 0 to 1 := 0;
         
-
-
         -- start pos
         variable start_pos_next_half: integer range 0 to 64 := 0;
         variable indx: integer range 0 to 64 := 0;
         variable index_row: integer range 0 to 64 := 0;
+
+        -- finish iterating
+        variable finish: boolean := false;
+        variable next_iter_last_iter: boolean := false;
         
-
-
+        
     begin
         case pr_state is
 
@@ -203,6 +202,7 @@ begin
                 --
                 -- App ram (NOT ENABLED)
                 --
+                mux_input_app <= '0';
                 app_rd_addr_var := '0';
                 app_wr_addr_var := '1';
                 app_rd_addr <= '0';
@@ -219,15 +219,21 @@ begin
                 --
                 -- inside CNB                 
                 --
+
                 msg_row_rd := 0;
                 msg_row_wr := 0;
+                msg_rd_addr <= std_logic_vector(to_unsigned(msg_row_rd, BW_MSG_RAM));
+                msg_wr_addr <= std_logic_vector(to_unsigned(msg_row_wr, BW_MSG_RAM));
+
                 iter_int := 0;
+                finish := false;
                 iter <= std_logic_vector(to_unsigned(0, BW_MAX_ITER));
 
 
                 --
                 -- resetting valid output
                 -- 
+                ok_checks := 0;
                 valid_output <= '0';
 
 
@@ -500,17 +506,36 @@ begin
                             mux_output_app(j) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));            
                             shift(j) <= std_logic_vector(to_unsigned(0, shift(0)'length));   -- because the matrix has the same values it is indifferent how much we shift 
                         end if;
-                    -- else                                    -- for all the remaining APP rams put out dummy value
-                    --     mux_output_app(j) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));            
-                    --     shift(j) <= std_logic_vector(to_unsigned(0, shift(0)'length));   -- it is indifferent how much we shift 
                     end if;
                 end loop;
 
-                cng_counter := cng_counter + 1;
 
+                cng_counter := cng_counter + 1;
                 if (cng_counter = matrix_rows) then
                     cng_counter := 0;
                     last_row := true;
+                end if;
+
+                if (msg_row_wr = matrix_rows * 2 - 1 and last_iter = true) then
+                    finish := true;
+                end if;
+
+
+                --
+                -- Parity checks handling
+                --
+                -- parity_out out of CN, which happens every 2 cycles in CT stage in the pipeline, we add and accumulate the parity_check
+                for i in 0 to SUBMAT_SIZE - 1 loop
+                    if (parity_out(i) = '0') then
+                        val := 1;
+                    else
+                        val := 0;
+                    end if;
+                    ok_checks := ok_checks + val;
+                end loop;
+
+                if (ok_checks = matrix_rows * SUBMAT_SIZE) then
+                    next_iter_last_iter := true;
                 end if;
 
 
@@ -523,14 +548,17 @@ begin
                 -- increment row in msg ram and retart if we have past the end
                 msg_row_rd := msg_row_rd + 1;
                 msg_row_wr := msg_row_wr + 1;
-                if (msg_row_rd = MSG_RAM_DEPTH) then
+
+                if (msg_row_rd = matrix_rows * 2) then
                     msg_row_rd := 0;
                 end if;
-                if (msg_row_wr = MSG_RAM_DEPTH) then
+                if (msg_row_wr = matrix_rows * 2) then
                     msg_row_wr := 0;
+                    last_iter := next_iter_last_iter;
                 end if;
+                
 
-
+                
 
                 --
                 -- signals for debugging
@@ -539,12 +567,23 @@ begin
                 cng_counter_sig <= cng_counter;
                 vector_addr_sig <= vector_addr;
                 start_pos_next_half_sig <= start_pos_next_half;
+                ok_checks_sig <= ok_checks;
 
+                if (msg_row_wr = 0) then
+                    ok_checks := 0;
+                end if;
 
                 --
                 -- next state 
                 --
-                nx_state <= ITERATING_SECOND;
+                if (finish) then
+                    if (ok_checks = matrix_rows * SUBMAT_SIZE) then
+                        valid_output <= '1';
+                    end if;
+                    nx_state <= FINISHING_ITER;
+                else
+                    nx_state <= ITERATING_SECOND;
+                end if;
 
 
             --------------------------------------------------------------------------------------
@@ -602,44 +641,24 @@ begin
                 --
                 -- inside CNB
                 --
+
                 -- iteration handling 
                 if (last_row = true) then
+                    last_row := false;
                     iter_int := iter_int + 1;
-                    if (iter_int = 10) then
-                        iter_int := 0;
-                        last_iter := true;
+                    if (iter_int = 9) then
+                        next_iter_last_iter := true;
                     end if;
                 end if;
-                -- set iteration number
                 iter <= std_logic_vector(to_unsigned(iter_int, BW_MAX_ITER));
 
                 
                 -- set all msg address for next cycle
                 msg_rd_addr <= std_logic_vector(to_unsigned(msg_row_rd, BW_MSG_RAM));
                 msg_wr_addr <= std_logic_vector(to_unsigned(msg_row_wr, BW_MSG_RAM));
-                -- increment row in msg ram and retart if we have past the end
+                -- increment row in msg ram and restart if we have past the end
                 msg_row_rd := msg_row_rd + 1;
                 msg_row_wr := msg_row_wr + 1;
-                if (msg_row_rd = MSG_RAM_DEPTH) then
-                    msg_row_rd := 0;
-                end if;
-                if (msg_row_wr = MSG_RAM_DEPTH) then
-                    msg_row_wr := 0;
-                end if;
-
-
-                --
-                -- Parity checks handling
-                --
-                -- parity_out out of CN, which happens every 2 cycles in CT stage in the pipeline, we add and accumulate the parity_check
-                for i in 0 to SUBMAT_SIZE - 1 loop
-                    if (parity_out(i) = '0') then
-                        val := 1;
-                    else
-                        val := 0;
-                    end if;
-                    ok_checks := ok_checks + val;
-                end loop;
 
 
                 --
@@ -649,102 +668,84 @@ begin
                 cng_counter_sig <= cng_counter;
                 vector_addr_sig <= vector_addr;
                 start_pos_next_half_sig <= start_pos_next_half;
+                ok_checks_sig <= ok_checks;
 
 
                 --
                 -- next state 
                 --
+                nx_state <= ITERATING_FIRST;
+                
 
-                if (last_row = true) then
-                    last_row := false;
-                    if (last_iter = true or ok_checks = matrix_rows * SUBMAT_SIZE) then
-                        last_iter := false;
 
-                        if (ok_checks =  matrix_rows * SUBMAT_SIZE) then
-                            ok_checks := 0;
-                            valid_output <= '1';
-                        end if;
-
-                        nx_state <= START_RESET;
-
-                    else
-                        ok_checks := 0;
-                        nx_state <= ITERATING_FIRST;
-                    end if;
-                else
-                    nx_state <= ITERATING_FIRST;
-                end if;
-
+               
+                
 
             --------------------------------------------------------------------------------------
             -- we have to let the pipeline flush itself out
             --------------------------------------------------------------------------------------
-        --     when FINISHING_ITER =>      -- when we have either reached maximum number of iterations or all pchks satisfied
-        --
-        --
-        --         --
-        --         -- clock gating for pipeline stages
-        --         --
-        --         ena_rp <= '0';
-        --         ena_ct <= '0';
-        --         ena_cf <= '0';
-        --         ena_vc <= '0';
-        --
-        --
-        --         --
-        --         -- APP ram
-        --         -- 
-        --         -- doesn't matter
-        --
-        --
-        --         --
-        --         -- max_app_val or real app val + real shift 
-        --         -- 
-        --         -- doesn't matter
-        --
-        --
-        --         --
-        --         -- inside CNB
-        --         --
-        --         -- doesn't matter
-        --
-        --
-        --         --
-        --         -- Parity checks handling
-        --         --
-        --
-        --
-        --         --
-        --         -- iteration handling 
-        --         --
-        --
-        --
-        --
-        --
-        --         --
-        --         -- next state 
-        --         --
-        --         flush_complete := true;
-        --         if (flush_complete = true) then
-        --             nx_state <= START_STORE_FIRST_HALF;
-        --         else
-        --             nx_state <= FINISHING_ITER;
-        --         end if;
-        --
+            when FINISHING_ITER =>      -- when we have either reached maximum number of iterations or all pchks satisfied
+
+
+                --
+                -- clock gating for pipeline stages
+                --
+                ena_rp <= '0';
+                ena_ct <= '0';
+                ena_cf <= '1';
+                ena_vc <= '1';
+
+
+                --
+                -- APP ram
+                -- 
+                mux_input_app <= '0';
+
+                app_rd_addr_var := not app_rd_addr_var;
+                app_rd_addr <= app_rd_addr_var;
+
+                app_wr_addr_var := not app_wr_addr_var;
+                app_wr_addr <= app_wr_addr_var;
+
+
+                --
+                -- max_app_val or real app val + real shift 
+                -- 
+                -- doesn't matter
+                mux_output_app <= (others => (others => '0'));
+                shift <= (others => (others => '0'));
+
+
+                --
+                -- inside CNB
+                --
+                -- doesn't matter
+                msg_rd_addr <= std_logic_vector(to_unsigned(msg_row_rd, BW_MSG_RAM));
+                msg_wr_addr <= std_logic_vector(to_unsigned(msg_row_wr, BW_MSG_RAM));
+
+
+                --
+                -- Parity checks handling
+                --
+                valid_output <= '1';
+                next_iter_last_iter := false;
+                last_iter := false;
+
+
+                --
+                -- iteration handling 
+                --
+                iter_int := 0;
+                iter <= std_logic_vector(to_unsigned(iter_int, BW_MAX_ITER));
+
+
+                --
+                -- next state 
+                --
+                nx_state <= START_RESET;
+
         end case;
 
     end process;
 
 end architecture circuit;
-
-
-
--- NOTE!!
--- app_ram_addresses don't need to be std_logic_vector they can be std_logic, and also they're the same for all APP ram instances becasue they only depend on state and the half we're dealing with
-
-
--- TODO:
--- change app ram addresses from std_logic_vector to std_logic
-
-
-

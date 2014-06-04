@@ -5,4 +5,5 @@ add wave -position 4 sim:/controller_tb/dut/index_row_sig
 add wave -position 4 sim:/controller_tb/dut/cng_counter_sig
 add wave -position 4 sim:/controller_tb/dut/vector_addr_sig
 add wave -position 4 sim:/controller_tb/dut/start_pos_next_half_sig
+add wave -position 4 sim:/controller_tb/dut/ok_checks_sig
 run -all
