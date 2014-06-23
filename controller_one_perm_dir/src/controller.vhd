@@ -39,6 +39,7 @@ entity controller is
              msg_rd_addr: out t_msg_ram_addr;
              msg_wr_addr: out t_msg_ram_addr;
              shift: out t_shift_contr;
+             mux_input_halves: std_logic;           -- mux choosing input codeword halves
              mux_input_app: out std_logic;        -- mux at input of app rams used for storing (0 = CNB, 1 = new code)
              mux_output_app: out t_mux_out_app                    -- mux output of appram used for selecting input of CNB (0 = app, 1 = dummy, 2 = new_code)
          );
@@ -96,11 +97,12 @@ begin
     end generate gen_matrix_addr;
 
 
+    -- changed to use offset matrix instead of original shift because of one permutation network
     gen_matrix_shift: for i in 0 to 63 generate
-        matrix_shift(i) <= IEEE_802_11AD_P42_N672_R050_SHIFT(i) when code_rate = R050 else 
-                           IEEE_802_11AD_P42_N672_R062_SHIFT(i) when i < 60 else -1 when code_rate = R062 else
-                           IEEE_802_11AD_P42_N672_R075_SHIFT(i) when i < 60 else -1 when code_rate = R075 else
-                           IEEE_802_11AD_P42_N672_R081_SHIFT(i) when i < 48 else -1 when code_rate = R081;
+        matrix_shift(i) <= IEEE_802_11AD_P42_N672_R050_OFFSET(i) when code_rate = R050 else 
+                           IEEE_802_11AD_P42_N672_R062_OFFSET(i) when i < 60 else -1 when code_rate = R062 else
+                           IEEE_802_11AD_P42_N672_R075_OFFSET(i) when i < 60 else -1 when code_rate = R075 else
+                           IEEE_802_11AD_P42_N672_R081_OFFSET(i) when i < 48 else -1 when code_rate = R081;
     end generate gen_matrix_shift;
 
     matrix_length <= IEEE_802_11AD_P42_N672_R050_ADDR'length when code_rate = R050 else
@@ -265,6 +267,7 @@ begin
                 mux_input_app <= '1';                               -- new codeword
                 app_rd_addr <= '0';
                 app_wr_addr <= '0';
+                mux_input_halves <= '0';
 
 
                 --
@@ -339,6 +342,7 @@ begin
                 mux_input_app <= '1';                               -- new codeword
                 app_rd_addr <= '1';
                 app_wr_addr <= '1';
+                mux_input_halves <= '1';
 
 
                 --
@@ -510,15 +514,17 @@ begin
                 end loop;
 
 
+                -- increment row in addr matrix. check if we have reached the last row of the addr matrix and if true then reset it to the first row
                 cng_counter := cng_counter + 1;
                 if (cng_counter = matrix_rows) then
                     cng_counter := 0;
                     last_row := true;
                 end if;
 
-                if (msg_row_wr = matrix_rows * 2 - 1 and last_iter = true) then
-                    finish := true;
-                end if;
+                -- if we are in the last row and this is our last iteration then we're finished iterating with this codeword
+                -- if (msg_row_wr = matrix_rows * 2 - 1 and last_iter = true) then
+                --     finish := true;
+                -- end if;
 
 
                 --
@@ -534,8 +540,13 @@ begin
                     ok_checks := ok_checks + val;
                 end loop;
 
+                -- if all parity checks are satisfied do one more whole iteration
                 if (ok_checks = matrix_rows * SUBMAT_SIZE) then
-                    next_iter_last_iter := true;
+                    if (next_iter_last_iter = true) then
+                        finish := true;
+                    else
+                        next_iter_last_iter := true;
+                    end if;
                 end if;
 
 
@@ -545,7 +556,8 @@ begin
                 iter <= std_logic_vector(to_unsigned(iter_int, BW_MAX_ITER));
                 msg_rd_addr <= std_logic_vector(to_unsigned(msg_row_rd, BW_MSG_RAM));
                 msg_wr_addr <= std_logic_vector(to_unsigned(msg_row_wr, BW_MSG_RAM));
-                -- increment row in msg ram and retart if we have past the end
+
+                -- increment row in msg ram and restart from the beginning if we have reached the end (and also set last_iter := next_iter_last iter for msg_row_wr)
                 msg_row_rd := msg_row_rd + 1;
                 msg_row_wr := msg_row_wr + 1;
 
@@ -554,11 +566,14 @@ begin
                 end if;
                 if (msg_row_wr = matrix_rows * 2) then
                     msg_row_wr := 0;
-                    last_iter := next_iter_last_iter;
                 end if;
                 
 
-                
+                -- reset ok checks only if we keep iterating else we need it to set "valid" signal
+                if (msg_row_wr = 0 and finish = false) then
+                    ok_checks := 0;
+                end if;
+
 
                 --
                 -- signals for debugging
@@ -569,8 +584,8 @@ begin
                 start_pos_next_half_sig <= start_pos_next_half;
                 ok_checks_sig <= ok_checks;
 
-                if (msg_row_wr = 0) then
-                    ok_checks := 0;
+                if (last_iter = true and msg_row_wr = 0) then
+                    --statement
                 end if;
 
                 --
@@ -578,7 +593,7 @@ begin
                 --
                 if (finish) then
                     if (ok_checks = matrix_rows * SUBMAT_SIZE) then
-                        valid_output <= '1';
+                       valid_output <= '1';
                     end if;
                     nx_state <= FINISHING_ITER;
                 else
@@ -647,7 +662,7 @@ begin
                     last_row := false;
                     iter_int := iter_int + 1;
                     if (iter_int = 9) then
-                        next_iter_last_iter := true;
+                        last_iter := true;
                     end if;
                 end if;
                 iter <= std_logic_vector(to_unsigned(iter_int, BW_MAX_ITER));
@@ -677,9 +692,6 @@ begin
                 nx_state <= ITERATING_FIRST;
                 
 
-
-               
-                
 
             --------------------------------------------------------------------------------------
             -- we have to let the pipeline flush itself out
