@@ -12,8 +12,10 @@ library work;
 use std.textio.all;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use work.pkg_ieee_802_11ad_matrix.all;
 use work.pkg_support.all;
 use work.pkg_types.all;
+use work.pkg_param.all;
 --------------------------------------------------------
 entity output_module_tb is
     generic (PERIOD: time := 40 ns;
@@ -27,6 +29,7 @@ architecture circuit of output_module_tb is
     --------------------------------------------------------------------------------------
     component output_module is
         port (
+                 rst: in std_logic;
                  clk: in std_logic;
                  valid: in std_logic;
                  code_rate: in t_code_rate;
@@ -38,14 +41,16 @@ architecture circuit of output_module_tb is
     --------------------------------------------------------------------------------------
     -- signals declaration
     --------------------------------------------------------------------------------------
+    signal rst_tb: std_logic := '0';
     signal clk_tb: std_logic := '0';
     signal valid_tb: std_logic := '0';
     signal code_rate_tb: t_code_rate;
     signal input_tb: t_message_app_half_codeword;
     signal output_tb: t_message_app_full_codeword;
-    file fin: text open read_mode is "test_file.txt";
+    file fin: text open read_mode is "input.txt";
+    file fout: text open read_mode is "output.txt";
     
-    
+    signal shift: t_array16;
     
 
 begin
@@ -54,6 +59,7 @@ begin
     -- component instantiation
     --------------------------------------------------------------------------------------
     dut: output_module port map (
+        rst => rst_tb,
         clk => clk_tb,
         valid => valid_tb,
         code_rate => code_rate_tb,
@@ -68,30 +74,61 @@ begin
 
     -- clk
     clk_tb <= not clk_tb after PERIOD / 2;
+
+    -- rst 
+    process
+         --declarative part
+    begin
+        rst_tb <= '1';
+        wait for PERIOD;
+        rst_tb <= '0';
+        wait;
+    end process;
+
     
     -- valid
-    valid_tb <= 
+    process
+    begin
+        wait for PERIOD;
+        valid_tb <= '1';
+        wait for 2 * PERIOD;
+        valid_tb <= '0';
+        wait;
+    end process;
+
 
     -- code_rate
-    code_rate_tb <= R050;
+    code_rate_tb <= R062;
+
+    -- shift
+    shift <= IEEE_802_11AD_P42_N672_R050_SHIFTING_INFO when code_rate_tb = R050 else 
+             IEEE_802_11AD_P42_N672_R062_SHIFTING_INFO when code_rate_tb = R062 else
+             IEEE_802_11AD_P42_N672_R075_SHIFTING_INFO when code_rate_tb = R075 else 
+             IEEE_802_11AD_P42_N672_R081_SHIFTING_INFO;  
+
 
     -- input
     process
         variable l: line;
         variable val: integer := 0;
+        variable first: boolean := false;
     begin
         if (not endfile(fin)) then
             if (first = false) then
                 first := true;
-                wait for PERIOD / 2;
+                wait for PERIOD;
             else
                 wait for PERIOD;
             end if;
-            for i in CFU_PAR_LEVEL - 1 downto 0 loop
-                readline(fin, l);
-                read(l, val);
-                input_tb(i) <= to_signed(val, BW_APP);
+            for i in 0 to CFU_PAR_LEVEL - 1 loop
+                for j in 0 to SUBMAT_SIZE - 1 loop
+                    readline(fin, l);
+                    read(l, val);
+                    input_tb(i)(SUBMAT_SIZE - j) <= to_signed(val, BW_APP);
+                end loop;
             end loop;
+        else
+            wait;
         end if;
     end process;
 
@@ -100,6 +137,36 @@ begin
    -- output verification
    --------------------------------------------------------------------------------------
 
-   -- output
+    process
+        variable l: line;
+        variable val: integer;
+        variable first: boolean := false;
+        variable index: integer := 0;
+        variable sign: integer := 0;
+        
+    begin
+        if (not endfile(fout)) then
+            if (first = false) then
+                first := true;
+                wait for 2 * PERIOD + PERIOD / 2 + PD;
+            else
+                wait for PERIOD;
+            end if;
+            for i in 0 to  2 * CFU_PAR_LEVEL - 1 loop
+                for j in 0 to SUBMAT_SIZE - 1 loop
+                    readline(fout, l);
+                    read(l, val);
+                    index := (SUBMAT_SIZE - shift(i) + j) mod SUBMAT_SIZE;
+                    assert output_tb(i)(index) = to_signed(val, BW_APP)
+                    report "for group " & integer'image(i) & " output should be " & integer'image(to_integer(output_tb(i)(index))) & " with index = " & integer'image(index) & " but instead is " & integer'image(val)
+                    severity failure;
+                end loop;
+            end loop;
+        else
+            assert false
+            report "Testbench passed"
+            severity failure;
+        end if;
+    end process;
 
 end architecture circuit;

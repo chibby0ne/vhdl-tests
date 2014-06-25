@@ -39,8 +39,8 @@ package pkg_support is
     -- Added by AJGP
     function ror_r(input: t_app_messages; shift: unsigned) return t_app_messages;
     function calculate_inverse(matrix_norm : t_array64) return t_array64;
-    function calculate_offset(matrix_norm : t_array64; matrix_inv: t_array64; matrix_rows: integer) return t_array64;
-    function calculate_shifting_info(matrix_norm : t_array64; matrix_rows: integer) return t_array16;
+    -- function calculate_offset(matrix_norm : t_array64; matrix_inv: t_array64; matrix_rows: integer) return t_array64;
+    -- function calculate_shifting_info(matrix_norm : t_array64; matrix_rows: integer) return t_array16;
    
 end pkg_support;
 
@@ -192,39 +192,39 @@ package body pkg_support is
     end function calculate_inverse;
 
 
-    function calculate_offset(matrix_norm : t_array64; matrix_inv: t_array64; matrix_rows: integer) return t_array64 is
-        variable offset_matrix: t_array64;
-        variable matrix_columns: integer := matrix_norm'length / matrix_rows;
-        variable row: integer := 0;
-    begin
-        for col in 0 to matrix_inv'length - 1 loop
-            row := 0;
-            while matrix_inv(matrix_columns*row + col) = -1 loop
-                offset_matrix(matrix_columns*row + col) := - 1;
-                row := row + 1;
-            end loop;
-            offset_matrix(matrix_columns*row + col) := matrix_inv(matrix_columns*row + col);
-            row := row + 1;
-            while row <= rows loop
-                l := row - 1;
-                while matrix_norm(matrix_columns*row + col) = -1 and l >= 1 loop
-                    l := l -1;  
-                end loop;
-                if (matrix_norm(matrix_columns*row + col) = -1 or matrix_norm(matrix_columns*row + col) = -1) then
-                    offset_matrix(matrix_columns*row + col) := -1;
-                else
-                    offset_matrix(matrix_columns*row + col) := (matrix_norm(matrix_columns*row + col) + matrix_inv(matrix_columns*row + col)) mod SUBMAT_SIZE;
-                end if;
-                row := row + 1;
-            end loop;
-        end loop;
-        return offset_matrix;
-    end function calculate_offset;
-
-    function calculate_shifting_info(matrix_norm : t_array64; matrix_rows: integer) return t_array16 is
-        --declarative part
-    begin
-        --sequential part
-    end function calculate_shifting_info;
-    
+    -- function calculate_offset(matrix_norm : t_array64; matrix_inv: t_array64; matrix_rows: integer) return t_array64 is
+    --     variable offset_matrix: t_array64;
+    --     variable matrix_columns: integer := matrix_norm'length / matrix_rows;
+    --     variable row: integer := 0;
+    -- begin
+    --     for col in 0 to matrix_inv'length - 1 loop
+    --         row := 0;
+    --         while matrix_inv(matrix_columns*row + col) = -1 loop
+    --             offset_matrix(matrix_columns*row + col) := - 1;
+    --             row := row + 1;
+    --         end loop;
+    --         offset_matrix(matrix_columns*row + col) := matrix_inv(matrix_columns*row + col);
+    --         row := row + 1;
+    --         while row <= rows loop
+    --             l := row - 1;
+    --             while matrix_norm(matrix_columns*row + col) = -1 and l >= 1 loop
+    --                 l := l -1;  
+    --             end loop;
+    --             if (matrix_norm(matrix_columns*row + col) = -1 or matrix_norm(matrix_columns*row + col) = -1) then
+    --                 offset_matrix(matrix_columns*row + col) := -1;
+    --             else
+    --                 offset_matrix(matrix_columns*row + col) := (matrix_norm(matrix_columns*row + col) + matrix_inv(matrix_columns*row + col)) mod SUBMAT_SIZE;
+    --             end if;
+    --             row := row + 1;
+    --         end loop;
+    --     end loop;
+    --     return offset_matrix;
+    -- end function calculate_offset;
+    --
+    -- function calculate_shifting_info(matrix_norm : t_array64; matrix_rows: integer) return t_array16 is
+    --     --declarative part
+    -- begin
+    --     --sequential part
+    -- end function calculate_shifting_info;
+    --
 end pkg_support;
