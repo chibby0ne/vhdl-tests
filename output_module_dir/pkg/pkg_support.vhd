@@ -41,6 +41,7 @@ package pkg_support is
     function calculate_inverse(matrix_norm : t_array64) return t_array64;
     -- function calculate_offset(matrix_norm : t_array64; matrix_inv: t_array64; matrix_rows: integer) return t_array64;
     -- function calculate_shifting_info(matrix_norm : t_array64; matrix_rows: integer) return t_array16;
+    function get_hard_decision(app : signed) return std_logic
    
 end pkg_support;
 
@@ -227,4 +228,17 @@ package body pkg_support is
     --     --sequential part
     -- end function calculate_shifting_info;
     --
+
+    function get_hard_decision(app : signed) return std_logic is
+        variable output: std_logic := '0';
+    begin
+        if (to_integer(app) > 0) then
+            output := '0';
+        else
+            output := '1';
+        end if;
+        return output;
+    end function get_hard_decision;
+
+
 end pkg_support;

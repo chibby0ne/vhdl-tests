@@ -32,7 +32,8 @@ port(
 
 	-- OUTPUTS
 	data_out      : out t_cn_message;
-	parity_out    : out std_logic
+	parity_out    : out std_logic;
+    hard_bits     : out t_hard_decision_cnb
 );
 end check_node;
 
@@ -417,14 +418,18 @@ begin
                 -- 			if index_h = i then
                 if v_sign = '1' then
                     data_out(i) <= data_out_neg_tc(0).min1;
+                    hard_bits(i) <= '1';
                 else
                     data_out(i) <= data_out_pos_tc(0).min1;
+                    hard_bits(i) <= '0';
                 end if;
             else
                 if v_sign = '1' then
                     data_out(i) <= data_out_neg_tc(0).min0;
+                    hard_bits(i) <= '1';
                 else
                     data_out(i) <= data_out_pos_tc(0).min0;
+                    hard_bits(i) <= '0';
                 end if;
             end if;
         end process pr_gen_out_upper;

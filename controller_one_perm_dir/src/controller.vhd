@@ -209,6 +209,7 @@ begin
                 app_wr_addr_var := '1';
                 app_rd_addr <= '0';
                 app_wr_addr <= '0';
+                mux_input_halves <= '0';
 
 
                 --

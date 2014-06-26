@@ -37,7 +37,8 @@ entity check_node_block is
         
     -- outputs
         app_out: out t_cnb_message_tc;  -- output type should be the same as input
-        check_node_parity_out: out std_logic
+        check_node_parity_out: out std_logic;
+        hard_bits_cnb: out t_hard_decision_cnb
 ); 
 end entity check_node_block;
 
@@ -162,7 +163,8 @@ begin
                                             data_in => check_node_in_reg_out,
                                             split => split,
                                             data_out => check_node_out,
-                                            parity_out => check_node_parity_out
+                                            parity_out => check_node_parity_out,
+                                            hard_bits => hard_bits_cnb
                                         );
     
     

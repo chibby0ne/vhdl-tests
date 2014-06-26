@@ -41,6 +41,8 @@ package pkg_types is
     -- messages in/out
     type t_app_messages is array (SUBMAT_SIZE - 1 downto 0) of signed(BW_APP - 1 downto 0);
 
+    type t_hard_decision_cnb is array (CFU_PAR_LEVEL - 1 downto 0) of std_logic; 
+
     -- shift value
     subtype t_shift_perm_net is std_logic_vector(BW_SHIFT_VEC - 1 downto 0);
 
