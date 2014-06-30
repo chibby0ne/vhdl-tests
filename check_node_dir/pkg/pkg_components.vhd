@@ -42,13 +42,16 @@ package pkg_components is
 			-- INPUTS
 			rst           : in std_logic;
 			clk           : in std_logic;
+            ena_cf        : in std_logic;
 			data_in       : in t_cn_message;
 			split         : in std_logic; -- is the CN working in split mode
 
 			-- OUTPUTS
 			data_out      : out t_cn_message;
 			-- parity_out    : out std_logic_vector(1 downto 0)
-			parity_out    : out std_logic
+			parity_out    : out std_logic;
+            hard_bits     : out t_hard_decision_cnb
+
 		);
 	end component;
 

@@ -541,7 +541,9 @@ begin
                     ok_checks := ok_checks + val;
                 end loop;
 
-                -- if all parity checks are satisfied do one more whole iteration
+                --
+                -- if all parity checks are satisfied do one more whole iteration (EARLY TERMINATION)
+                --
                 if (ok_checks = matrix_rows * SUBMAT_SIZE) then
                     if (next_iter_last_iter = true) then
                         finish := true;
@@ -550,6 +552,12 @@ begin
                     end if;
                 end if;
 
+                --
+                -- NORMAL TERMINATION
+                --
+                if (last_iter = true and last_row = true ) then
+                    finish := true;
+                end if;
 
                 --
                 -- inside CNB
@@ -562,15 +570,15 @@ begin
                 msg_row_rd := msg_row_rd + 1;
                 msg_row_wr := msg_row_wr + 1;
 
-                if (msg_row_rd = matrix_rows * 2) then
+                if (msg_row_rd = matrix_rows * 2) then          -- check if this actually happens in this state
                     msg_row_rd := 0;
                 end if;
-                if (msg_row_wr = matrix_rows * 2) then
+                if (msg_row_wr = matrix_rows * 2) then          -- check if this actually happens in this state
                     msg_row_wr := 0;
                 end if;
                 
 
-                -- reset ok checks only if we keep iterating else we need it to set "valid" signal
+                -- reset ok_checks only if we keep iterating else we need it to set "valid" signal
                 if (msg_row_wr = 0 and finish = false) then
                     ok_checks := 0;
                 end if;
@@ -585,9 +593,6 @@ begin
                 start_pos_next_half_sig <= start_pos_next_half;
                 ok_checks_sig <= ok_checks;
 
-                if (last_iter = true and msg_row_wr = 0) then
-                    --statement
-                end if;
 
                 --
                 -- next state 
@@ -662,7 +667,7 @@ begin
                 if (last_row = true) then
                     last_row := false;
                     iter_int := iter_int + 1;
-                    if (iter_int = 9) then
+                    if (iter_int = MAX_ITER - 1) then
                         last_iter := true;
                     end if;
                 end if;

@@ -39,7 +39,6 @@ package pkg_types is
     -- messages in/out 
     type t_app_messages is array (SUBMAT_SIZE - 1 downto 0) of signed(BW_APP - 1 downto 0);
     
-    type t_hard_decision_cnb is array (CFU_PAR_LEVEL - 1 downto 0) of std_logic; 
 
     -- shift value
     subtype t_shift_perm_net is std_logic_vector(BW_SHIFT_VEC - 1 downto 0);
@@ -81,12 +80,19 @@ package pkg_types is
      -- iteration type
     subtype t_iter is std_logic_vector(BW_MAX_ITER - 1 downto 0);
 
+
+    -- hard bits per cnb (as well as cn)
+    type t_hard_decision_cnb is array (CFU_PAR_LEVEL - 1 downto 0) of std_logic; 
    
+
     -- APP ram
     -------------
     -- app ram addr
     subtype t_app_ram_addr is std_logic_vector(BW_APP_RAM - 1 downto 0);
 
+    -- MUX at output of APP 
+    -----------------------
+    type t_mux_out_app is array (CFU_PAR_LEVEL - 1 downto 0) of std_logic_vector(1 downto 0);
 
 
     -- Controller types
@@ -102,6 +108,16 @@ package pkg_types is
 
     --- 8 permutations networks
     type t_shift_contr is array (CFU_PAR_LEVEL - 1 downto 0) of t_shift_perm_net;
+
+    -- Top Level
+    --------------
+
+    -- 8 of each app message
+    type t_message_app_full_codeword is array (2 * CFU_PAR_LEVEL - 1 downto 0) of t_app_messages;
+    type t_message_app_half_codeword is array (CFU_PAR_LEVEL - 1 downto 0) of t_app_messages;
+
+    -- 42 of each cnb message
+    type t_cnb_message_tc_top_level is array (SUBMAT_SIZE - 1 downto 0) of t_cnb_message_tc;
 
 
 

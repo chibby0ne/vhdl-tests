@@ -41,8 +41,6 @@ package pkg_types is
     -- messages in/out
     type t_app_messages is array (SUBMAT_SIZE - 1 downto 0) of signed(BW_APP - 1 downto 0);
 
-    type t_hard_decision_cnb is array (CFU_PAR_LEVEL - 1 downto 0) of std_logic; 
-
     -- shift value
     subtype t_shift_perm_net is std_logic_vector(BW_SHIFT_VEC - 1 downto 0);
 
@@ -71,7 +69,6 @@ package pkg_types is
 	type t_cn_mag is array (CFU_PAR_LEVEL - 1 downto 0) of unsigned(BW_EXTR - 2 downto 0);
 
 
-    
 
     -- Check Node Block 
     ---------------
@@ -84,6 +81,10 @@ package pkg_types is
 
     -- iteration type
     subtype t_iter is std_logic_vector(BW_MAX_ITER - 1 downto 0);
+
+    -- hard bits per cnb (as well as per cn)
+    type t_hard_decision_cnb is array (CFU_PAR_LEVEL - 1 downto 0) of std_logic; 
+
 
 
     -- APP ram
