@@ -46,8 +46,7 @@ architecture circuit of check_node_block_tb is
         
     -- outputs
         app_out: out t_cnb_message_tc;  -- output type should be the same as input
-        check_node_parity_out: out std_logic;
-        hard_bits_cnb: out t_hard_decision_cnb
+        check_node_parity_out: out std_logic
     );
 
     end component check_node_block;
@@ -68,7 +67,6 @@ architecture circuit of check_node_block_tb is
     signal app_in_tb: t_cnb_message_tc;
     signal app_out_tb: t_cnb_message_tc;
     signal check_node_parity_out_tb: std_logic := '0';
-    signal hard_bits_cnb_tb: t_hard_decision_cnb;
     
     file fin: text open read_mode is "input_app.txt";       -- used for entering app_in
     file fout: text open read_mode is "output_app.txt";     -- used for comparing app_out
@@ -95,8 +93,7 @@ begin
         addr_msg_ram_write => addr_msg_ram_write_tb,
         app_in => app_in_tb,
         app_out => app_out_tb,
-        check_node_parity_out => check_node_parity_out_tb,
-        hard_bits_cnb => hard_bits_cnb_tb
+        check_node_parity_out => check_node_parity_out_tb
     );
 
     

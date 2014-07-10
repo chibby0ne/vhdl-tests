@@ -110,8 +110,7 @@ package pkg_components is
 
                 -- OUTPUTS
                 data_out      : out t_cn_message;
-                parity_out    : out std_logic;
-                hard_bits     : out t_hard_decision_cnb
+                parity_out    : out std_logic
             );
    	end component;
 
