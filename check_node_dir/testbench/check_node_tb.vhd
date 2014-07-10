@@ -43,8 +43,7 @@ architecture circuit of check_node_tb is
 
     -- OUTPUTS
                 data_out      : out t_cn_message;
-                parity_out    : out std_logic;
-                hard_bits     : out t_hard_decision_cnb
+                parity_out    : out std_logic
             );
 
     end component check_node;
@@ -57,7 +56,6 @@ architecture circuit of check_node_tb is
     signal split_tb: std_logic := '0';
     signal data_out_tb: t_cn_message;
     signal parity_out_tb: std_logic;
-    signal hard_bits_tb: t_hard_decision_cnb;
     
     
     file f: text open read_mode is "input_cn.txt";
@@ -82,8 +80,7 @@ begin
         data_in => data_in_tb,
         split => split_tb, 
         data_out => data_out_tb,
-        parity_out => parity_out_tb,
-        hard_bits => hard_bits_tb
+        parity_out => parity_out_tb
     );
 
     
