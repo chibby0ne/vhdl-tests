@@ -31,7 +31,8 @@ architecture circuit of permutation_network is
 begin
     shift_int <= to_integer(unsigned(shift));
     output <= input when shift_int = 0 else 
-              input(input'high - shift_int downto 0) & input(input'high downto input'high - shift_int + 1); 
+              input(shift_int - 1 downto 0) & input(input'high downto shift_int);
+              -- input(input'high - shift_int downto 0) & input(input'high downto input'high - shift_int + 1); 
 end architecture circuit;
 --------------------------------------------------------
 

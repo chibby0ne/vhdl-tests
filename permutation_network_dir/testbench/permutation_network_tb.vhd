@@ -47,6 +47,10 @@ architecture circuit of permutation_network_tb is
     signal clk_tb: std_logic := '0';
     
     
+    -- test circular right shift
+    -- signal circular_right_shift: std_logic_vector(3 downto 0) := "0100";
+    
+    
 begin
 
     
@@ -63,6 +67,9 @@ begin
     --------------------------------------------------------------------------------------
     -- stimuli generation
     --------------------------------------------------------------------------------------
+
+    -- circular right shift
+    -- circular_right_shift <= circular_right_shift ror 2;
 
     -- clk
     clk_tb <= not clk_tb after PERIOD / 2;
