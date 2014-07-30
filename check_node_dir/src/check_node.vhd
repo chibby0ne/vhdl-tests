@@ -232,7 +232,7 @@ begin
     four_min_s3_in(0).min0 <= four_min_s2_out_first_half(0).min0;
     four_min_s3_in(0).min1 <= four_min_s2_out_first_half(0).min1;
     four_min_s3_in(0).min2 <= four_min_s2_out(0).min0;
-    four_min_s3_in(0).min3 <= four_min_s2_out(0).min0;
+    four_min_s3_in(0).min3 <= four_min_s2_out(0).min1;
 
     -- evaluate the third stage of the four min modules with the two halves rows info
     four_min_s3_out(0) <= four_min(four_min_s3_in(0));

@@ -39,7 +39,7 @@ package pkg_param is
 	--! Maximal number of iterations the decoder can do.
 	constant MAX_ITER       : natural := 10;
 
-    --! Maximum number of layers in Parity matrix (for Code rate R=050)
+    --! Maximum number of layer in Parity matrix (for Code rate R050)
     constant MAX_LAYERS: natural := 8;
 
     --! Depth of msg ram = max layers of parity matrix * 2 (because each subiteration is half layer)
@@ -47,6 +47,8 @@ package pkg_param is
 
     --! Depth of app ram = subiterations per layer
     constant APP_RAM_DEPTH: natural := 2;
+   
+
 
 	--!
 	--! Define the extrinsic scaling factor to use within the check node.

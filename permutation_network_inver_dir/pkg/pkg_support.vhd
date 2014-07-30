@@ -15,8 +15,6 @@ library work;
 use work.pkg_param.all;
 use work.pkg_param_derived.all;
 use work.pkg_types.all;
-use work.pkg_ieee_802_11ad_param.all;
-use work.pkg_ieee_802_11ad_matrix.all;
 
 
 package pkg_support is
@@ -38,8 +36,7 @@ package pkg_support is
 
     -- Added by AJGP
     function ror_r(input: t_app_messages; shift: unsigned) return t_app_messages;
-    function calculate_inverse(matrix_norm : t_array64) return t_array64;
-   
+    
 end pkg_support;
 
 
@@ -176,19 +173,4 @@ package body pkg_support is
     end function ror_r;
 
 
-    function calculate_inverse(matrix_norm : t_array64) return t_array64 is
-        variable matrix_inv: t_array64;
-    begin
-        for i in 0 to matrix_norm'length - 1 loop
-            if (matrix_norm(i) = -1) then
-                matrix_inv(i) := -1;
-            else
-                matrix_inv(i) := SUBMAT_SIZE - matrix_norm(i);
-            end if;
-        end loop;
-        return matrix_inv;
-    end function calculate_inverse;
-
-
-   
 end pkg_support;

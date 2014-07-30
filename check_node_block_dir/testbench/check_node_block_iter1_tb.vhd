@@ -68,9 +68,11 @@ architecture circuit of check_node_block_tb is
     signal app_out_tb: t_cnb_message_tc;
     signal check_node_parity_out_tb: std_logic := '0';
     
-    file fin: text open read_mode is "input_app_whole_iter.txt";       -- used for entering app_in
-    file fout: text open read_mode is "output_app_whole_iter.txt";     -- used for comparing app_out
+    -- file fin: text open read_mode is "input_app_whole_iter.txt";       -- used for entering app_in
+    -- file fout: text open read_mode is "output_app_whole_iter.txt";     -- used for comparing app_out
     
+    file fin: text open read_mode is "input_app_decoder.txt";       -- used for entering app_in
+    file fout: text open read_mode is "output_app_decoder.txt";     -- used for comparing app_out
     
     
 

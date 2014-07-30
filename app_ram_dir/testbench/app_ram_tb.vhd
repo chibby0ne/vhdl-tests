@@ -37,8 +37,11 @@ architecture circuit of app_ram_tb is
         port (
                  clk: in std_logic;
                  we: in std_logic;
-                 wr_address: in std_logic_vector(M-1 downto 0);
-                 rd_address: in std_logic_vector(M-1 downto 0);
+                 -- wr_address: in std_logic_vector(M-1 downto 0);
+                 -- rd_address: in std_logic_vector(M-1 downto 0);
+
+                 wr_address: in std_logic;
+                 rd_address: in std_logic;
                  data_in: in t_app_messages;
                  data_out: out t_app_messages);
     end component app_ram;
@@ -49,8 +52,10 @@ architecture circuit of app_ram_tb is
     --------------------------------------------------------
     signal clk_tb: std_logic := '0';
     signal we_tb: std_logic := '0';
-    signal wr_address_tb: std_logic_vector(M-1 downto 0);
-    signal rd_address_tb: std_logic_vector(M-1 downto 0);
+    -- signal wr_address_tb: std_logic_vector(M-1 downto 0);
+    -- signal rd_address_tb: std_logic_vector(M-1 downto 0);
+    signal wr_address_tb: std_logic;
+    signal rd_address_tb: std_logic;
     signal data_in_tb: t_app_messages;
     signal data_out_tb: t_app_messages;
     
@@ -97,13 +102,21 @@ begin
     -- wr_addr
     process
     begin
-        wr_address_tb <= std_logic_vector(to_unsigned(0, 1));
+        -- wr_address_tb <= std_logic_vector(to_unsigned(0, 1));
+        -- wait for PERIOD/2 + PD;         -- 23 ns
+        -- wr_address_tb <= std_logic_vector(to_unsigned(1, 1));
+        -- wait for PERIOD;                -- 63 ns
+        -- wr_address_tb <= std_logic_vector(to_unsigned(0, 1));
+        -- wait for PERIOD;                -- 103 ns
+        -- wr_address_tb <= std_logic_vector(to_unsigned(1, 1));
+        
+        wr_address_tb <= '0';
         wait for PERIOD/2 + PD;         -- 23 ns
-        wr_address_tb <= std_logic_vector(to_unsigned(1, 1));
+        wr_address_tb <= '1';
         wait for PERIOD;                -- 63 ns
-        wr_address_tb <= std_logic_vector(to_unsigned(0, 1));
+        wr_address_tb <= '0';
         wait for PERIOD;                -- 103 ns
-        wr_address_tb <= std_logic_vector(to_unsigned(1, 1));
+        wr_address_tb <= '1';
         wait;
     end process;
     
@@ -138,15 +151,27 @@ begin
     -- rd_addr
     process
     begin
-        rd_address_tb <= std_logic_vector(to_unsigned(1, 1));
+        -- rd_address_tb <= std_logic_vector(to_unsigned(1, 1));
+        -- wait for PERIOD/2 + PD;        -- 23 ns
+        -- rd_address_tb <= std_logic_vector(to_unsigned(0, 1));
+        -- wait for PERIOD;        -- 63 ns
+        -- rd_address_tb <= std_logic_vector(to_unsigned(1, 1));
+        -- wait for PERIOD;        -- 103 ns
+        -- rd_address_tb <= std_logic_vector(to_unsigned(0, rd_address_tb'length));
+        -- wait for PERIOD;        -- 143 ns
+        -- rd_address_tb <= std_logic_vector(to_unsigned(1, rd_address_tb'length));
+
+        rd_address_tb <= '1';
         wait for PERIOD/2 + PD;        -- 23 ns
-        rd_address_tb <= std_logic_vector(to_unsigned(0, 1));
+        rd_address_tb <= '0'; 
         wait for PERIOD;        -- 63 ns
-        rd_address_tb <= std_logic_vector(to_unsigned(1, 1));
+        rd_address_tb <= '1';
         wait for PERIOD;        -- 103 ns
-        rd_address_tb <= std_logic_vector(to_unsigned(0, rd_address_tb'length));
+        rd_address_tb <= '0'; 
         wait for PERIOD;        -- 143 ns
-        rd_address_tb <= std_logic_vector(to_unsigned(1, rd_address_tb'length));
+        rd_address_tb <= '1';
+
+
         wait;
     end process;
 

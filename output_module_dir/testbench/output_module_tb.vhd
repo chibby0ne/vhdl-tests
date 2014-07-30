@@ -31,10 +31,10 @@ architecture circuit of output_module_tb is
         port (
                  rst: in std_logic;
                  clk: in std_logic;
-                 valid: in std_logic;
+                 finish_iter: in std_logic;
                  code_rate: in t_code_rate;
-                 input: in t_message_app_half_codeword;
-                 output: out t_message_app_full_codeword);
+                 input: in t_hard_decision_half_codeword;
+                 output: out t_hard_decision_full_codeword);
     end component output_module;
 
     
@@ -43,10 +43,10 @@ architecture circuit of output_module_tb is
     --------------------------------------------------------------------------------------
     signal rst_tb: std_logic := '0';
     signal clk_tb: std_logic := '0';
-    signal valid_tb: std_logic := '0';
+    signal finish_iter_tb: std_logic := '0';
     signal code_rate_tb: t_code_rate;
-    signal input_tb: t_message_app_half_codeword;
-    signal output_tb: t_message_app_full_codeword;
+    signal input_tb: t_hard_decision_half_codeword;
+    signal output_tb: t_hard_decision_full_codeword;
     file fin: text open read_mode is "input.txt";
     file fout: text open read_mode is "output.txt";
     
@@ -61,7 +61,7 @@ begin
     dut: output_module port map (
         rst => rst_tb,
         clk => clk_tb,
-        valid => valid_tb,
+        finish_iter => finish_iter_tb,
         code_rate => code_rate_tb,
         input => input_tb,
         output => output_tb
@@ -86,19 +86,19 @@ begin
     end process;
 
     
-    -- valid
+    -- finish_iter
     process
     begin
         wait for PERIOD;
-        valid_tb <= '1';
+        finish_iter_tb <= '1';
         wait for 2 * PERIOD;
-        valid_tb <= '0';
+        finish_iter_tb <= '0';
         wait;
     end process;
 
 
     -- code_rate
-    code_rate_tb <= R062;
+    code_rate_tb <= R050;
 
     -- shift
     shift <= IEEE_802_11AD_P42_N672_R050_SHIFTING_INFO when code_rate_tb = R050 else 
@@ -111,6 +111,7 @@ begin
     process
         variable l: line;
         variable val: integer := 0;
+        variable val_assigned: std_logic := '0';
         variable first: boolean := false;
     begin
         if (not endfile(fin)) then
@@ -120,11 +121,16 @@ begin
             else
                 wait for PERIOD;
             end if;
-            for i in 0 to CFU_PAR_LEVEL - 1 loop
-                for j in 0 to SUBMAT_SIZE - 1 loop
+            for i in CFU_PAR_LEVEL - 1 downto 0 loop
+                for j in SUBMAT_SIZE - 1 downto 0 loop
                     readline(fin, l);
                     read(l, val);
-                    input_tb(i)(SUBMAT_SIZE - j) <= to_signed(val, BW_APP);
+                    if (val = 0) then
+                        val_assigned := '0';
+                    else
+                        val_assigned := '1';
+                    end if;
+                    input_tb(i)(j) <= val_assigned; 
                 end loop;
             end loop;
         else
@@ -140,9 +146,12 @@ begin
     process
         variable l: line;
         variable val: integer;
+        variable val_assigned: std_logic := '0';
         variable first: boolean := false;
         variable index: integer := 0;
         variable sign: integer := 0;
+        variable output_tb_int: integer := 0;
+        
         
     begin
         if (not endfile(fout)) then
@@ -152,13 +161,31 @@ begin
             else
                 wait for PERIOD;
             end if;
-            for i in 0 to  2 * CFU_PAR_LEVEL - 1 loop
-                for j in 0 to SUBMAT_SIZE - 1 loop
+            for i in 2 * CFU_PAR_LEVEL - 1 downto 0 loop
+                for j in SUBMAT_SIZE - 1 downto 0 loop
                     readline(fout, l);
                     read(l, val);
-                    index := (SUBMAT_SIZE - shift(i) + j) mod SUBMAT_SIZE;
-                    assert output_tb(i)(index) = to_signed(val, BW_APP)
-                    report "for group " & integer'image(i) & " output should be " & integer'image(to_integer(output_tb(i)(index))) & " with index = " & integer'image(index) & " but instead is " & integer'image(val)
+
+                    -- get value of file as std_logic (needed for assertion)
+                    if (val = 0) then
+                        val_assigned := '0';
+                    else
+                        val_assigned := '1';
+                    end if;
+
+                    -- get value of index
+                    index := (shift((2 * CFU_PAR_LEVEL - 1) - i) + j) mod SUBMAT_SIZE;
+                    
+                    -- get value of output as int (needed for assertion)
+                    if output_tb(i)(index) = '0' then
+                        output_tb_int := 0;
+                    else
+                        output_tb_int := 1;
+                    end if;
+
+
+                    assert output_tb(i)(index) = val_assigned 
+                    report "for group " & integer'image(i) & " output should be " & integer'image(val) & " with index = " & integer'image(index) & " but instead is " & integer'image(output_tb_int)
                     severity failure;
                 end loop;
             end loop;

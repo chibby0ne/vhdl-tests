@@ -1,8 +1,8 @@
 --! 
 --! Copyright (C) 2010 - 2013 Creonic GmbH
 --!
---! @file: permutation_network_tb.vhd
---! @brief: permutation network tb
+--! @file: permutation_network_inver_tb.vhd
+--! @brief: permutation network inverse tb
 --! @author: Antonio Gutierrez
 --! @date: 2014-05-02
 --!
@@ -18,20 +18,20 @@ use work.pkg_param.all;
 use work.pkg_param_derived.all;
 use std.textio.all;
 --------------------------------------------------------
-entity permutation_network_tb is
+entity permutation_network_inver_tb is
     generic (PERIOD: time := 40 ns;
             PD: time := 3 ns);
-end entity permutation_network_tb;
+end entity permutation_network_inver_tb;
 --------------------------------------------------------
-architecture circuit of permutation_network_tb is
+architecture circuit of permutation_network_inver_tb is
     
     -- dut declaration 
-    component permutation_network is
+    component permutation_network_inver is
         port (
                  input: in t_app_messages;
                  shift: in t_shift_perm_net;
                  output: out t_app_messages);
-    end component permutation_network;
+    end component permutation_network_inver;
     
     -- signals declaration
     signal input_tb: t_app_messages;
@@ -40,7 +40,8 @@ architecture circuit of permutation_network_tb is
 
     -- files for input and output
     file fin: text open read_mode is "input_ram.txt";
-    file fout: text open read_mode is "output_ram.txt";
+    -- file fout: text open read_mode is "output_ram.txt";
+    file fout: text open read_mode is "output_ram_left.txt";
     
     -- additional signals
     signal clk_tb: std_logic := '0';
@@ -52,7 +53,7 @@ begin
     --------------------------------------------------------------------------------------
     -- dut instantiation
     --------------------------------------------------------------------------------------
-    dut: permutation_network port map (
+    dut: permutation_network_inver port map (
         input => input_tb,
         shift => shift_tb,
         output => output_tb
@@ -85,7 +86,7 @@ begin
         variable first: integer range 0 to 1 := 0;
     begin
         for i in 0 to SUBMAT_SIZE - 1 loop
-            shift_tb <= std_logic_vector(to_unsigned(i, BW_SHIFT_VEC));
+            shift_tb <= std_logic_vector(to_signed(i, BW_SHIFT_VEC));
             if (first = 0) then
                 first := 1;
                 wait for PERIOD / 2 + PD;

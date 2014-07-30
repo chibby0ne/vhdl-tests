@@ -46,6 +46,7 @@ package pkg_ieee_802_11ad_matrix is
     31, 23, 21, 20, 12, 0, 13, -1, 
     22, 34, 31, 14, 4, 13, 22, 24);
 
+    -- make sure this size is correct for implementation (shift is smaller)
     constant IEEE_802_11AD_P42_N672_R050_OFFSET : t_array128 := ( 
     2, -1, 4, -1, 29, -1, 37, -1, 24, -1, -1, -1, -1, -1, -1, -1,
     6, -1, 3, -1, 28, -1, -1, 12, 16, 41, -1, -1, -1, -1, -1, -1,

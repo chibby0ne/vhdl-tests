@@ -58,12 +58,15 @@ architecture circuit of check_node_tb is
     signal parity_out_tb: std_logic;
     
     
-    file f: text open read_mode is "input_cn.txt";
-    file f_comp: text open read_mode is "output_cn.txt";
+    -- file f: text open read_mode is "input_cn.txt";
+    -- file f_comp: text open read_mode is "output_cn.txt";
+    file f: text open read_mode is "input_cn_test_bug.txt";
+    file f_comp: text open read_mode is "output_cn_test_bug.txt";
     signal first: std_logic := '0';
 
     signal input: t_cn_message;
     
+
 
 begin
 
@@ -167,7 +170,7 @@ begin
                 read(l_comp, output_val);
 
                 assert (data_out_tb(i) = to_signed(output_val, BW_EXTR))
-                report "output mismatch!"
+                report "data_out(" & integer'image(i) & ") = " & integer'image(to_integer(data_out_tb(i))) & ". But should be : " & integer'image(output_val)
                 severity failure;
             end loop;
             wait for PERIOD;
