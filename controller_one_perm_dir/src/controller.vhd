@@ -40,9 +40,9 @@ entity controller is
              msg_rd_addr: out t_msg_ram_addr;
              msg_wr_addr: out t_msg_ram_addr;
              shift: out t_shift_contr;
-             mux_input_halves: out std_logic;           -- mux choosing input codeword halves
+             mux_input_halves: out std_logic;     -- mux choosing input codeword halves
              mux_input_app: out std_logic;        -- mux at input of app rams used for storing (0 = CNB, 1 = new code)
-             mux_output_app: out t_mux_out_app                    -- mux output of appram used for selecting input of CNB (0 = app, 1 = dummy, 2 = new_code)
+             mux_output_app: out t_mux_out_app    -- mux output of appram used for selecting input of CNB (0 = app, 1 = dummy, 2 = new_code)
          );
 end entity controller;
 --------------------------------------------------------
@@ -273,7 +273,7 @@ begin
                 mux_input_app <= '1';                               -- new codeword
                 app_rd_addr <= '0';
                 app_wr_addr <= '0';
-                mux_input_halves <= '0';
+                mux_input_halves <= '0';                            -- start with MS half
 
 
                 --
