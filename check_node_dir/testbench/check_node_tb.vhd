@@ -42,8 +42,7 @@ architecture circuit of check_node_tb is
                 split         : in std_logic; -- is the CN working in split mode
 
     -- OUTPUTS
-                data_out      : out t_cn_message;
-                parity_out    : out std_logic
+                data_out      : out t_cn_message
             );
 
     end component check_node;
@@ -55,7 +54,6 @@ architecture circuit of check_node_tb is
     signal data_in_tb: t_cn_message;
     signal split_tb: std_logic := '0';
     signal data_out_tb: t_cn_message;
-    signal parity_out_tb: std_logic;
     
     
     -- file f: text open read_mode is "input_cn.txt";
@@ -82,8 +80,7 @@ begin
         ena_cf => ena_cf_tb,
         data_in => data_in_tb,
         split => split_tb, 
-        data_out => data_out_tb,
-        parity_out => parity_out_tb
+        data_out => data_out_tb
     );
 
     
@@ -128,7 +125,6 @@ begin
                 -- data_in_tb(i) <= to_signed(input_val, BW_EXTR);
                 -- use this when using correct implementation in design else use the to_signed line above
                 val_conv := to_signed(input_val, BW_EXTR);
-
                 input(i) <= val_conv;
                 data_in_tb(i) <= sign_magnitude(val_conv);
             end loop;
@@ -140,9 +136,6 @@ begin
             end if;
         else
             wait;
-            -- assert false
-            -- report "no errors"
-            -- severity failure;
         end if;
     end process;
 

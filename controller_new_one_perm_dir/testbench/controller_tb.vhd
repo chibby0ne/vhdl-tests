@@ -52,8 +52,8 @@ architecture circuit of controller_tb is
         msg_rd_addr: out t_msg_ram_addr;
         msg_wr_addr: out t_msg_ram_addr;
         shift: out t_shift_contr;
-        mux_input_halves: out std_logic;           -- mux choosing input codeword halves
-        mux_output_app: out t_mux_out_app                    -- mux output of appram used for selecting input of CNB (0 = app, 1 = dummy, 2 = new_code)
+        sel_mux_input_halves: out std_logic;           -- mux choosing input codeword halves
+        sel_mux_output_app: out t_mux_out_app                    -- mux output of appram used for selecting input of CNB (0 = app, 1 = dummy, 2 = new_code)
         );
     end component controller;
 
@@ -77,8 +77,8 @@ architecture circuit of controller_tb is
     signal msg_wr_addr_tb: t_msg_ram_addr;
     signal shift_tb: t_shift_contr;
 
-    signal mux_input_halves_tb: std_logic;           -- mux choosing input codeword halves
-    signal mux_output_app_tb: t_mux_out_app;
+    signal sel_mux_input_halves_tb: std_logic;           -- mux choosing input codeword halves
+    signal sel_mux_output_app_tb: t_mux_out_app;
     
     file fin: text open read_mode is "input_controller.txt";
     file fin_valid: text open read_mode is "input_controller_valid.txt";
@@ -148,8 +148,8 @@ begin
         msg_rd_addr => msg_rd_addr_tb,
         msg_wr_addr => msg_wr_addr_tb,
         shift => shift_tb,
-        mux_input_halves => mux_input_halves_tb,
-        mux_output_app => mux_output_app_tb
+        sel_mux_input_halves => sel_mux_input_halves_tb,
+        sel_mux_output_app => sel_mux_output_app_tb
     );
 
     
@@ -663,23 +663,23 @@ begin
     end process;
 
 
-    -- mux_input_halves     (I don't need to test it I'm already seeing it in the wave... it doesn't change after going to 1 until there's a new codeword)
+    -- sel_mux_input_halves     (I don't need to test it I'm already seeing it in the wave... it doesn't change after going to 1 until there's a new codeword)
     process
     begin
         wait for PD;
         wait for PERIOD / 2;
-        assert mux_input_halves_tb = '0'
-        report "mux_input_halves_tb should be 0 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & mux_input_halves_tb))))
+        assert sel_mux_input_halves_tb = '0'
+        report "sel_mux_input_halves_tb should be 0 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & sel_mux_input_halves_tb))))
         severity failure;
 
         wait for PERIOD;                        -- FIRST
-        assert mux_input_halves_tb = '0'
-        report "mux_input_halves_tb should be 0 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & mux_input_halves_tb))))
+        assert sel_mux_input_halves_tb = '0'
+        report "sel_mux_input_halves_tb should be 0 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & sel_mux_input_halves_tb))))
         severity failure;
 
         wait for PERIOD;                        -- SECOND
-        assert mux_input_halves_tb = '1'
-        report "mux_input_halves_tb should be 1 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & mux_input_halves_tb))))
+        assert sel_mux_input_halves_tb = '1'
+        report "sel_mux_input_halves_tb should be 1 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & sel_mux_input_halves_tb))))
         severity failure;
 
         wait;
@@ -690,7 +690,7 @@ begin
 
 
 
-    -- mux_output_app and shift
+    -- sel_mux_output_app and shift
     process
         variable vector_addr: integer := 0;
         variable cng_counter: integer := 0;
@@ -702,8 +702,8 @@ begin
         wait for PERIOD / 2;
 
         for l in 0 to CFU_PAR_LEVEL - 1 loop
-            assert mux_output_app_tb(l) = std_logic_vector(to_unsigned(0, mux_output_app_tb(0)'length))
-            report "output mismatch with mux_output_app_tb(" & integer'image(l) & ") should be " & integer'image(0) & "but is " & integer'image(to_integer(unsigned(mux_output_app_tb(l))))
+            assert sel_mux_output_app_tb(l) = std_logic_vector(to_unsigned(0, sel_mux_output_app_tb(0)'length))
+            report "output mismatch with sel_mux_output_app_tb(" & integer'image(l) & ") should be " & integer'image(0) & "but is " & integer'image(to_integer(unsigned(sel_mux_output_app_tb(l))))
             severity failure;
 
             assert shift_tb(l) = std_logic_vector(to_unsigned(0, shift_tb(0)'length))
@@ -727,13 +727,13 @@ begin
                             if (l = matrix_addr(index_row + vector_addr)) then
                                 if (now < 5 * PERIOD) then                          -- reading from input
                                     -- MUX_OUTPUT
-                                    assert mux_output_app_tb(l) = std_logic_vector(to_unsigned(2, mux_output_app_tb(0)'length))
-                                    report "output mismatch with mux_output_app_tb(" & integer'image(l) & ") should be " & integer'image(2) & " but is " & integer'image(to_integer(unsigned(mux_output_app_tb(l))))
+                                    assert sel_mux_output_app_tb(l) = std_logic_vector(to_unsigned(2, sel_mux_output_app_tb(0)'length))
+                                    report "output mismatch with sel_mux_output_app_tb(" & integer'image(l) & ") should be " & integer'image(2) & " but is " & integer'image(to_integer(unsigned(sel_mux_output_app_tb(l))))
                                     severity failure;
                                 else                                                -- reading from APP
                                     -- MUX_OUTPUT
-                                    assert mux_output_app_tb(l) = std_logic_vector(to_unsigned(0, mux_output_app_tb(0)'length))
-                                    report "output mismatch with mux_output_app_tb(" & integer'image(l) & ") should be " & integer'image(0) & " but is " & integer'image(to_integer(unsigned(mux_output_app_tb(l))))
+                                    assert sel_mux_output_app_tb(l) = std_logic_vector(to_unsigned(0, sel_mux_output_app_tb(0)'length))
+                                    report "output mismatch with sel_mux_output_app_tb(" & integer'image(l) & ") should be " & integer'image(0) & " but is " & integer'image(to_integer(unsigned(sel_mux_output_app_tb(l))))
                                     severity failure;
                                 end if;                                             -- where comes: APP or Input
 
@@ -745,8 +745,8 @@ begin
 
                             else                                                    -- when not a valid edge
                                 -- MUX_OUTPUT
-                                assert mux_output_app_tb(l) = std_logic_vector(to_unsigned(1, mux_output_app_tb(0)'length))
-                                report "output mismatch with mux_output_app_tb(" & integer'image(l) & ") should be " & integer'image(1) & " but is " & integer'image(to_integer(unsigned(mux_output_app_tb(l))))
+                                assert sel_mux_output_app_tb(l) = std_logic_vector(to_unsigned(1, sel_mux_output_app_tb(0)'length))
+                                report "output mismatch with sel_mux_output_app_tb(" & integer'image(l) & ") should be " & integer'image(1) & " but is " & integer'image(to_integer(unsigned(sel_mux_output_app_tb(l))))
                                 severity failure;
 
 
@@ -767,14 +767,14 @@ begin
                                 if (l + CFU_PAR_LEVEL = matrix_addr(index_row + vector_addr)) then      -- when is valid edge
                                     if (now < 5 * PERIOD) then                          -- reading from input
                                         -- MUX_OUTPUT
-                                        assert mux_output_app_tb(l) = std_logic_vector(to_unsigned(2, mux_output_app_tb(0)'length))
-                                        report "output mismatch with mux_output_app_tb(" & integer'image(l) & ") should be " & integer'image(2) & " but is " & integer'image(to_integer(unsigned(mux_output_app_tb(l))))
+                                        assert sel_mux_output_app_tb(l) = std_logic_vector(to_unsigned(2, sel_mux_output_app_tb(0)'length))
+                                        report "output mismatch with sel_mux_output_app_tb(" & integer'image(l) & ") should be " & integer'image(2) & " but is " & integer'image(to_integer(unsigned(sel_mux_output_app_tb(l))))
                                         severity failure;
 
                                     else                                                -- reading from APP
                                         -- MUX_OUTPUT
-                                        assert mux_output_app_tb(l) = std_logic_vector(to_unsigned(0, mux_output_app_tb(0)'length))
-                                        report "output mismatch with mux_output_app_tb(" & integer'image(l) & ") should be " & integer'image(0) & " but is " & integer'image(to_integer(unsigned(mux_output_app_tb(l))))
+                                        assert sel_mux_output_app_tb(l) = std_logic_vector(to_unsigned(0, sel_mux_output_app_tb(0)'length))
+                                        report "output mismatch with sel_mux_output_app_tb(" & integer'image(l) & ") should be " & integer'image(0) & " but is " & integer'image(to_integer(unsigned(sel_mux_output_app_tb(l))))
                                         severity failure;
 
                                     end if;                                             -- where comes: APP or Input
@@ -787,8 +787,8 @@ begin
 
                                 else                                                    -- when not a valid edge
                                     -- MUX_OUTPUT
-                                    assert mux_output_app_tb(l) = std_logic_vector(to_unsigned(1, mux_output_app_tb(0)'length))
-                                    report "output mismatch with mux_output_app_tb(" & integer'image(l) & ") should be " & integer'image(1) & " but is " & integer'image(to_integer(unsigned(mux_output_app_tb(l))))
+                                    assert sel_mux_output_app_tb(l) = std_logic_vector(to_unsigned(1, sel_mux_output_app_tb(0)'length))
+                                    report "output mismatch with sel_mux_output_app_tb(" & integer'image(l) & ") should be " & integer'image(1) & " but is " & integer'image(to_integer(unsigned(sel_mux_output_app_tb(l))))
                                     severity failure;
 
 

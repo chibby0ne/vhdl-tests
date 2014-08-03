@@ -40,8 +40,8 @@ entity controller is
              msg_rd_addr: out t_msg_ram_addr;
              msg_wr_addr: out t_msg_ram_addr;
              shift: out t_shift_contr;
-             mux_input_halves: out std_logic;     -- mux choosing input codeword halves
-             mux_output_app: out t_mux_out_app    -- mux output of appram used for selecting input of CNB (0 = app, 1 = dummy, 2 = new_code)
+             sel_mux_input_halves: out std_logic;     -- mux choosing input codeword halves
+             sel_mux_output_app: out t_mux_out_app    -- mux output of appram used for selecting input of CNB (0 = app, 1 = dummy, 2 = new_code)
          );
 end entity controller;
 --------------------------------------------------------
@@ -194,14 +194,14 @@ begin
                 --
                 app_rd_addr <= '0';
                 app_wr_addr <= '0';
-                mux_input_halves <= '0';
+                sel_mux_input_halves <= '0';
 
 
                 --
                 -- max_app_val or real app val + real shift 
                 --
                 cng_counter := 0;
-                mux_output_app <= (others => (others => '0'));
+                sel_mux_output_app <= (others => (others => '0'));
                 shift <= (others => (others => '0'));
 
 
@@ -218,7 +218,7 @@ begin
                 iter_int := 0;
                 iter <= std_logic_vector(to_unsigned(0, BW_MAX_ITER));
                 finish_iter <= '0';
-
+                next_iter_last_iter := false;
 
                 --
                 -- resetting valid output
@@ -250,7 +250,7 @@ begin
                 if (first_time = true) then
 
                     ena_vc <= '0';
-                    mux_input_halves <= '0';                            -- start with MS half
+                    sel_mux_input_halves <= '0';                            -- start with MS half
 
                     -- matrix's rows handling
                     cng_counter := 0;
@@ -293,9 +293,9 @@ begin
                     -- parity checks (1st half)
                     --
                     for i in 0 to SUBMAT_SIZE - 1 loop
-                        pchecks(i) := parity_out(i)(0);
-                        for j in 1 to CFU_PAR_LEVEL - 1 loop
-                            pchecks(i) := pchecks(i) xor parity_out(i)(j);
+                        pchecks(i) := parity_out(i)(0);                     -- bit if edge 0, for cnb i
+                        for j in 1 to CFU_PAR_LEVEL - 1 loop                -- xor all the edges (j) in each cnb (i)
+                            pchecks(i) := pchecks(i) xor parity_out(i)(j);  
                         end loop;
                     end loop;
 
@@ -314,18 +314,18 @@ begin
                     if (index_row < matrix_max_check_degree / 2) then                -- have we check entire first half row values?
                         if (i = matrix_addr(index_row + vector_addr)) then            -- is the value in app or dummy value 
                             if (first_time = true) then
-                                mux_output_app(i) <= std_logic_vector(to_unsigned(2, mux_output_app(0)'length));            
+                                sel_mux_output_app(i) <= std_logic_vector(to_unsigned(2, sel_mux_output_app(0)'length));            
                             else
-                                mux_output_app(i) <= std_logic_vector(to_unsigned(0, mux_output_app(0)'length));            
+                                sel_mux_output_app(i) <= std_logic_vector(to_unsigned(0, sel_mux_output_app(0)'length));            
                             end if;
                             shift(i) <= std_logic_vector(to_unsigned(matrix_shift(index_row + vector_addr), shift(0)'length));
                             index_row := index_row + 1;
                         else
-                            mux_output_app(i) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));         -- put max_extr_msg
+                            sel_mux_output_app(i) <= std_logic_vector(to_unsigned(1, sel_mux_output_app(0)'length));         -- put max_extr_msg
                             shift(i) <= std_logic_vector(to_unsigned(0, shift(0)'length));                  -- it is indifferent how much we shift 
                         end if;
                     else
-                        mux_output_app(i) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));         -- put max_extr_msg
+                        sel_mux_output_app(i) <= std_logic_vector(to_unsigned(1, sel_mux_output_app(0)'length));         -- put max_extr_msg
                         shift(i) <= std_logic_vector(to_unsigned(0, shift(0)'length));                  -- it is indifferent how much we shift 
                     end if;
                 end loop;
@@ -389,7 +389,7 @@ begin
                 -- APP RAM  or NEW_CODEWORD
                 --
                 if (first_time = true) then
-                    mux_input_halves <= '1';                -- get codeword from input 
+                    sel_mux_input_halves <= '1';                -- get codeword from input 
                 else
                     app_rd_addr <= '1';
 
@@ -432,14 +432,14 @@ begin
                     if index_row < matrix_max_check_degree then     -- if this is still part of this second half row of the matrix 
                         if (j + CFU_PAR_LEVEL = matrix_addr(index_row + vector_addr)) then        -- this value of the matrix corresponds to this app ram
                             if (first_time = true) then                       
-                                mux_output_app(j) <= std_logic_vector(to_unsigned(2, mux_output_app(0)'length));                -- if first time, get it from input
+                                sel_mux_output_app(j) <= std_logic_vector(to_unsigned(2, sel_mux_output_app(0)'length));                -- if first time, get it from input
                             else
-                                mux_output_app(j) <= std_logic_vector(to_unsigned(0, mux_output_app(0)'length));                -- else, get it from cnb
+                                sel_mux_output_app(j) <= std_logic_vector(to_unsigned(0, sel_mux_output_app(0)'length));                -- else, get it from cnb
                             end if;
                             shift(j) <= std_logic_vector(to_unsigned(matrix_shift(index_row + vector_addr), shift(0)'length));
                             index_row := index_row + 1;
                         else 
-                            mux_output_app(j) <= std_logic_vector(to_unsigned(1, mux_output_app(0)'length));            
+                            sel_mux_output_app(j) <= std_logic_vector(to_unsigned(1, sel_mux_output_app(0)'length));            
                             shift(j) <= std_logic_vector(to_unsigned(0, shift(0)'length));      
                         end if;
                     end if;

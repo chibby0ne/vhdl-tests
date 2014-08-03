@@ -90,8 +90,7 @@ package pkg_components is
         app_in: in t_cnb_message_tc;   -- input type has to be of CFU_PAR_LEVEL because that's the number of edges that CFU handle
         
     -- outputs
-        app_out: out t_cnb_message_tc;  -- output type should be the same as input
-        check_node_parity_out: out std_logic
+        app_out: out t_cnb_message_tc  -- output type should be the same as input
     ); 
     end component check_node_block;
 
@@ -109,8 +108,7 @@ package pkg_components is
                 split         : in std_logic; -- is the CN working in split mode
 
                 -- OUTPUTS
-                data_out      : out t_cn_message;
-                parity_out    : out std_logic
+                data_out      : out t_cn_message
             );
    	end component;
 
