@@ -58,8 +58,10 @@ architecture circuit of check_node_tb is
     
     -- file f: text open read_mode is "input_cn.txt";
     -- file f_comp: text open read_mode is "output_cn.txt";
-    file f: text open read_mode is "input_cn_test_bug.txt";
-    file f_comp: text open read_mode is "output_cn_test_bug.txt";
+    -- file f: text open read_mode is "input_cn_test_bug.txt";
+    -- file f_comp: text open read_mode is "output_cn_test_bug.txt";
+    file f: text open read_mode is "input_using_chain_cfu0.txt";
+    file f_comp: text open read_mode is "output_using_chain_cfu0.txt";
     signal first: std_logic := '0';
 
     signal input: t_cn_message;

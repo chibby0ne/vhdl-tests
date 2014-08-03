@@ -40,7 +40,7 @@ architecture circuit of controller_tb is
         parity_out: in t_parity_out_contr;
 
         -- outputs
-        ena_vc: out std_logic;
+        ena_vc: out std_logic_vector(CFU_PAR_LEVEL - 1 downto 0);
         ena_rp: out std_logic;
         ena_ct: out std_logic;
         ena_cf: out std_logic;
@@ -64,7 +64,7 @@ architecture circuit of controller_tb is
     signal code_rate_tb: t_code_rate;
     signal parity_out_tb: t_parity_out_contr;
 
-    signal ena_vc_tb: std_logic := '0';
+    signal ena_vc_tb: std_logic_vector(CFU_PAR_LEVEL - 1 downto 0) := (others => '0');
     signal ena_rp_tb: std_logic := '0';
     signal ena_ct_tb: std_logic := '0';
     signal ena_cf_tb: std_logic := '0';
@@ -241,48 +241,94 @@ begin
     
     -- -- ena_vc
     process
+        variable index_row: integer := 0;
+        variable start_pos_next_half: integer := 0;
+        variable cng_counter: integer := 0;
+        variable vector_addr: integer := 0;
+        
+        
     begin
         wait for PD;                                        -- reset (0 to PERIOD / 2)
         wait for PERIOD / 2;
-        assert ena_vc_tb = '0'
-        report "ena_vc_tb should be 0 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & ena_vc_tb))))
-        severity failure;
+        for i in 0 to CFU_PAR_LEVEL - 1 loop
+            assert ena_vc_tb(i) = '0' 
+            report "ena_vc_tb(" & integer'image(i) & " should be 0 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & ena_vc_tb(i)))))
+            severity failure;
+        end loop;
 
 
         wait for PERIOD;                                    -- FIRST (PERIOD + PERIOD / 2 to PERIOD * 2 + PERIOD / 2)
-        assert ena_vc_tb = '0'
-        report "ena_vc_tb should be 0 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & ena_vc_tb))))
-        severity failure;
+        for i in 0 to CFU_PAR_LEVEL - 1 loop
+            assert ena_vc_tb(i) = '0' 
+            report "ena_vc_tb(" & integer'image(i) & " should be 0 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & ena_vc_tb(i)))))
+            severity failure;
+        end loop;
 
         wait for PERIOD;                                    -- SECOND
-        assert ena_vc_tb = '0'
-        report "ena_vc_tb should be 0 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & ena_vc_tb))))
-        severity failure;
+        for i in 0 to CFU_PAR_LEVEL - 1 loop
+            assert ena_vc_tb(i) = '0' 
+            report "ena_vc_tb(" & integer'image(i) & " should be 0 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & ena_vc_tb(i)))))
+            severity failure;
+        end loop;
 
         wait for PERIOD;                                    -- THIRD
-        assert ena_vc_tb = '0'
-        report "ena_vc_tb should be 0 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & ena_vc_tb))))
-        severity failure;
+        for i in 0 to CFU_PAR_LEVEL - 1 loop
+            assert ena_vc_tb(i) = '0' 
+            report "ena_vc_tb(" & integer'image(i) & " should be 0 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & ena_vc_tb(i)))))
+            severity failure;
+        end loop;
 
-        wait for PERIOD;                                   -- FOURTH
-        assert ena_vc_tb = '1'
-        report "ena_vc_tb should be 1 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & ena_vc_tb))))
-        severity failure;
-
-        -- for the rest of the iterations
 
         for i in 0 to MAX_ITER - 3 loop
-            for j in 0 to CYCLES_PER_ROW * matrix_rows - 1 loop
-                wait for PERIOD;
-                if ((j mod 4 = 0) or ((j + 1) mod 4 = 0 and j /= 0)) then
-                    assert ena_vc_tb = '1'
-                    report "ena_vc_tb should be 1 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & ena_vc_tb))))
-                    severity failure;
-                else
-                    assert ena_vc_tb = '0'
-                    report "ena_vc_tb should be 0 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & ena_vc_tb))))
-                    severity failure;
-                end if;
+            cng_counter := 0;
+            for j in 0 to matrix_rows - 1 loop
+                for k in 0 to CYCLES_PER_ROW - 1 loop
+
+                    wait for PERIOD;                                   -- FOURTH
+
+                    vector_addr := cng_counter * matrix_max_check_degree;
+
+                    if (k = 0) then                                                     -- fourth state (storing first half)   but it is entering in foruth state so k should be 0
+                        index_row := 0;
+                        for l in 0 to CFU_PAR_LEVEL - 1 loop
+                            if (l =  matrix_addr(index_row + vector_addr)) then
+                                assert ena_vc_tb(l) = '1'
+                                report "ena_vc_tb(" & integer'image(l) & ") should be 1 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & ena_vc_tb(l)))))
+                                severity failure;
+                                index_row := index_row + 1;
+                            else
+                                assert ena_vc_tb(l) = '0'
+                                report "ena_vc_tb(" & integer'image(l) & ") should be 0 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & ena_vc_tb(l)))))
+                                severity failure;
+                            end if;
+                        end loop;
+
+                        start_pos_next_half := index_row;
+                    elsif (k = 1) then                                                    -- first state (storing second half) but because it entered in fourth state k this shoudl be 1
+                        index_row := start_pos_next_half;
+                        for l in 0 to CFU_PAR_LEVEL -1 loop
+                            if (index_row < matrix_max_check_degree) then
+                                if (l + CFU_PAR_LEVEL = matrix_addr(index_row + vector_addr)) then          -- if valid
+                                    assert ena_vc_tb(l) = '1'
+                                    report "ena_vc_tb(" & integer'image(l) & ") should be 1 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & ena_vc_tb(l)))))
+                                    severity failure;
+                                    index_row := index_row + 1;
+                                else
+                                    assert ena_vc_tb(l) = '0'
+                                    report "ena_vc_tb(" & integer'image(l) & ") should be 0 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & ena_vc_tb(l)))))
+                                    severity failure;
+                                end if;
+                            end if;
+                        end loop;
+                    else
+                        for l in 0 to CFU_PAR_LEVEL - 1 loop
+                            assert ena_vc_tb(l) = '0'
+                            report "ena_vc_tb(" & integer'image(l) & ") should be 0 but is " & integer'image(to_integer(unsigned(std_logic_vector'("" & ena_vc_tb(l)))))
+                            severity failure;
+                        end loop;
+                    end if;
+                end loop;
+                cng_counter := cng_counter + 1;
             end loop;
         end loop;
 
